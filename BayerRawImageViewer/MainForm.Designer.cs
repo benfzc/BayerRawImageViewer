@@ -425,6 +425,7 @@
             Controls.Add(pictureBox);
             Name = "MainForm";
             Text = "Bayer Raw Image Viewer";
+            Load += MainForm_Load;
             panelControl.ResumeLayout(false);
             groupBoxRawType.ResumeLayout(false);
             groupBoxRawType.PerformLayout();
