@@ -418,6 +418,7 @@
             // 
             // MainForm
             // 
+            AllowDrop = true;
             AutoScaleDimensions = new SizeF(8F, 17F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(944, 499);
@@ -426,6 +427,8 @@
             Name = "MainForm";
             Text = "Bayer Raw Image Viewer";
             Load += MainForm_Load;
+            DragDrop += MainForm_DragDrop;
+            DragEnter += MainForm_DragEnter;
             panelControl.ResumeLayout(false);
             groupBoxRawType.ResumeLayout(false);
             groupBoxRawType.PerformLayout();
