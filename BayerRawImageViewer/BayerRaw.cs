@@ -48,6 +48,11 @@ namespace BayerRawImageViewer
             }
         }
 
+        public void SetBayerPattern(ColorConversionCodes pattern)
+        {
+            bayerPattern = pattern;
+        }
+
         public Bitmap ToBitmap()
         {
             using var bgr16BitMat = new Mat(height, width, MatType.CV_16UC3);

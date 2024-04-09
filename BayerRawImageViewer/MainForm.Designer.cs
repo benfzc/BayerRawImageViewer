@@ -276,9 +276,9 @@
             radioButtonBayerBG.Name = "radioButtonBayerBG";
             radioButtonBayerBG.Size = new Size(44, 21);
             radioButtonBayerBG.TabIndex = 0;
-            radioButtonBayerBG.TabStop = true;
             radioButtonBayerBG.Text = "BG";
             radioButtonBayerBG.UseVisualStyleBackColor = true;
+            radioButtonBayerBG.CheckedChanged += radioButtonBayer_CheckedChanged;
             // 
             // radioButtonBayerGB
             // 
@@ -287,9 +287,9 @@
             radioButtonBayerGB.Name = "radioButtonBayerGB";
             radioButtonBayerGB.Size = new Size(44, 21);
             radioButtonBayerGB.TabIndex = 0;
-            radioButtonBayerGB.TabStop = true;
             radioButtonBayerGB.Text = "GB";
             radioButtonBayerGB.UseVisualStyleBackColor = true;
+            radioButtonBayerGB.CheckedChanged += radioButtonBayer_CheckedChanged;
             // 
             // radioButtonBayerRG
             // 
@@ -298,13 +298,14 @@
             radioButtonBayerRG.Name = "radioButtonBayerRG";
             radioButtonBayerRG.Size = new Size(44, 21);
             radioButtonBayerRG.TabIndex = 0;
-            radioButtonBayerRG.TabStop = true;
             radioButtonBayerRG.Text = "RG";
             radioButtonBayerRG.UseVisualStyleBackColor = true;
+            radioButtonBayerRG.CheckedChanged += radioButtonBayer_CheckedChanged;
             // 
             // radioButtonBayerGR
             // 
             radioButtonBayerGR.AutoSize = true;
+            radioButtonBayerGR.Checked = true;
             radioButtonBayerGR.Location = new Point(16, 24);
             radioButtonBayerGR.Name = "radioButtonBayerGR";
             radioButtonBayerGR.Size = new Size(44, 21);
@@ -312,6 +313,7 @@
             radioButtonBayerGR.TabStop = true;
             radioButtonBayerGR.Text = "GR";
             radioButtonBayerGR.UseVisualStyleBackColor = true;
+            radioButtonBayerGR.CheckedChanged += radioButtonBayer_CheckedChanged;
             // 
             // groupBoxAWB
             // 
