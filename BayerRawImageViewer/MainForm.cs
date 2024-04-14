@@ -30,8 +30,13 @@ namespace BayerRawImageViewer
             if (s.Length > 0)
             {
                 pathname = s[0];
+                if (!getResolution())
+                {
+                    MessageBox.Show("Please enter valid width, height, and stride between 1 and 10000.");
+                    return;
+                }
                 // FIXME: image infomation should get from window form
-                using BayerRaw bayerRaw = new BayerRaw(pathname, 4224, 3120, 5280, 10, 1);
+                using BayerRaw bayerRaw = new BayerRaw(pathname, this.imgWidth, this.imgHeight, this.imgStride, 10, 1);
                 getBayerSelection();
                 Bitmap bmp = bayerRaw.ToBitmap();
                 pictureBox.Image = bmp;
@@ -43,8 +48,13 @@ namespace BayerRawImageViewer
         {
             if (pathname.Length > 0)
             {
+                if (!getResolution())
+                {
+                    MessageBox.Show("Please enter valid width, height, and stride between 1 and 10000.");
+                    return;
+                }
                 // FIXME: image infomation should get from window form
-                using BayerRaw bayerRaw = new BayerRaw(pathname, 4224, 3120, 5280, 10, 1);
+                using BayerRaw bayerRaw = new BayerRaw(pathname, this.imgWidth, this.imgHeight, this.imgStride, 10, 1);
                 getBayerSelection();
                 bayerRaw.SetBayerPattern(bayerPattern);
                 Bitmap bmp = bayerRaw.ToBitmap();
@@ -66,8 +76,33 @@ namespace BayerRawImageViewer
                 bayerPattern = ColorConversionCodes.BayerGB2RGB;
         }
 
+        private bool getResolution()
+        {
+            int width, height, stride;
+
+            if (!int.TryParse(textBoxWidth.Text, out width) || width < 1 || width > 10000)
+            {
+                return false;
+            }
+            if (!int.TryParse(textBoxHeight.Text, out height) || height < 1 || height > 10000)
+            {
+                return false;
+            }
+            if (!int.TryParse(textBoxStride.Text, out stride) || stride < 1 || stride > 10000)
+            {
+                return false;
+            }
+
+            this.imgWidth = width;
+            this.imgHeight = height;
+            this.imgStride = stride;
+
+            return true;
+        }
+
         private string pathname = "";
         private ColorConversionCodes bayerPattern = ColorConversionCodes.BayerBG2RGB;
+        private int imgWidth, imgHeight, imgStride;
 
     }
 }

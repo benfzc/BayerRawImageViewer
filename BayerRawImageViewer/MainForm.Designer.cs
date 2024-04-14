@@ -111,6 +111,7 @@
             // radioButtonTypePacked
             // 
             radioButtonTypePacked.AutoSize = true;
+            radioButtonTypePacked.Checked = true;
             radioButtonTypePacked.Location = new Point(16, 46);
             radioButtonTypePacked.Name = "radioButtonTypePacked";
             radioButtonTypePacked.Size = new Size(97, 21);
@@ -150,7 +151,6 @@
             radioButton14bit.Name = "radioButton14bit";
             radioButton14bit.Size = new Size(42, 21);
             radioButton14bit.TabIndex = 3;
-            radioButton14bit.TabStop = true;
             radioButton14bit.Text = "14";
             radioButton14bit.UseVisualStyleBackColor = true;
             // 
@@ -161,13 +161,13 @@
             radioButton12bit.Name = "radioButton12bit";
             radioButton12bit.Size = new Size(42, 21);
             radioButton12bit.TabIndex = 2;
-            radioButton12bit.TabStop = true;
             radioButton12bit.Text = "12";
             radioButton12bit.UseVisualStyleBackColor = true;
             // 
             // radioButton10bit
             // 
             radioButton10bit.AutoSize = true;
+            radioButton10bit.Checked = true;
             radioButton10bit.Location = new Point(88, 24);
             radioButton10bit.Name = "radioButton10bit";
             radioButton10bit.Size = new Size(42, 21);
@@ -183,7 +183,6 @@
             radioButton8bit.Name = "radioButton8bit";
             radioButton8bit.Size = new Size(34, 21);
             radioButton8bit.TabIndex = 0;
-            radioButton8bit.TabStop = true;
             radioButton8bit.Text = "8";
             radioButton8bit.UseVisualStyleBackColor = true;
             // 
@@ -210,6 +209,7 @@
             textBoxStride.Name = "textBoxStride";
             textBoxStride.Size = new Size(110, 24);
             textBoxStride.TabIndex = 1;
+            textBoxStride.Text = "5280";
             // 
             // textBoxHeight
             // 
@@ -219,6 +219,7 @@
             textBoxHeight.Name = "textBoxHeight";
             textBoxHeight.Size = new Size(110, 24);
             textBoxHeight.TabIndex = 1;
+            textBoxHeight.Text = "3120";
             // 
             // textBoxWidth
             // 
@@ -228,6 +229,7 @@
             textBoxWidth.Name = "textBoxWidth";
             textBoxWidth.Size = new Size(110, 24);
             textBoxWidth.TabIndex = 1;
+            textBoxWidth.Text = "4224";
             // 
             // label3
             // 
