@@ -30,6 +30,10 @@ namespace BayerRawImageViewer
             if (s.Length > 0)
             {
                 pathname = s[0];
+                directorypath = Path.GetDirectoryName(pathname);
+                filename = Path.GetFileNameWithoutExtension(pathname);
+
+
                 if (!getResolution())
                 {
                     MessageBox.Show("Please enter valid width, height, and stride between 1 and 10000.");
@@ -38,9 +42,16 @@ namespace BayerRawImageViewer
                 // FIXME: image infomation should get from window form
                 using BayerRaw bayerRaw = new BayerRaw(pathname, this.imgWidth, this.imgHeight, this.imgStride, 10, 1);
                 getBayerSelection();
+                bayerRaw.SetBayerPattern(bayerPattern);
                 Bitmap bmp = bayerRaw.ToBitmap();
                 pictureBox.Image = bmp;
                 pictureBox.SizeMode = PictureBoxSizeMode.Zoom;
+
+                getOutputOption();
+                if (saveUnpackedRaw)
+                {
+                    bayerRaw.saveUnpackRaw(8, directorypath + "/"+ filename + "_unpacke_raw8.raw");
+                }
             }
         }
 
@@ -60,6 +71,12 @@ namespace BayerRawImageViewer
                 Bitmap bmp = bayerRaw.ToBitmap();
                 pictureBox.Image = bmp;
                 pictureBox.SizeMode = PictureBoxSizeMode.Zoom;
+
+                getOutputOption();
+                if (saveUnpackedRaw)
+                {
+                    bayerRaw.saveUnpackRaw(8, directorypath + "/" + filename + "_unpacke_raw8.raw");
+                }
             }
         }
 
@@ -74,6 +91,18 @@ namespace BayerRawImageViewer
                 bayerPattern = ColorConversionCodes.BayerGR2RGB;
             else if (radioButtonBayerGB.Checked)
                 bayerPattern = ColorConversionCodes.BayerGB2RGB;
+        }
+
+        private void getOutputOption()
+        {
+            if (checkBoxSaveUnpackedRaw.Checked)
+            {
+                saveUnpackedRaw = true;
+            }
+            else
+            {
+                saveUnpackedRaw = false;
+            }
         }
 
         private bool getResolution()
@@ -101,8 +130,10 @@ namespace BayerRawImageViewer
         }
 
         private string pathname = "";
+        private string directorypath = "", filename = "";
         private ColorConversionCodes bayerPattern = ColorConversionCodes.BayerBG2RGB;
         private int imgWidth, imgHeight, imgStride;
+        private bool saveUnpackedRaw = false;
 
     }
 }

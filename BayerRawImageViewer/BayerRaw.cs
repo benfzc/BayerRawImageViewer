@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Formats.Asn1;
 using System.Linq;
 using System.Text;
@@ -61,6 +62,25 @@ namespace BayerRawImageViewer
             Cv2.Demosaicing(unpackedRaw, bgr16BitMat, bayerPattern, 3);
             bgr16BitMat.ConvertTo(bgr8BitMat, MatType.CV_8UC3, 1 / 256.0);
             return BitmapConverter.ToBitmap(bgr8BitMat);
+        }
+
+        public void saveUnpackRaw(int _depth, string _pathname)
+        {
+            if (unpackedRaw == null) return;
+            if (_depth == 16)
+            {
+                using var fs = File.Open(_pathname, FileMode.Create);
+                unpackedRaw.GetArray(out byte[] data);
+                fs.Write(data);
+            }
+            else if (_depth == 8)
+            {
+                using var fs = File.Open(_pathname, FileMode.Create);
+                using var raw8 = new Mat();
+                unpackedRaw.ConvertTo(raw8, MatType.CV_8UC1, 1 / 256.0);
+                raw8.GetArray(out byte[] data);
+                fs.Write(data);
+            }
         }
 
 
