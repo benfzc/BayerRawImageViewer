@@ -8,7 +8,31 @@ namespace BayerRawImageViewer
         public MainForm()
         {
             InitializeComponent();
+            comboBoxOutputRawDepth.Items.Clear();
+            comboBoxOutputRawDepth.Items.Add(new ComboboxItemBitNumber("8 bit", 8));
+            comboBoxOutputRawDepth.Items.Add(new ComboboxItemBitNumber("10 bit", 10));
+            comboBoxOutputRawDepth.Items.Add(new ComboboxItemBitNumber("12 bit", 12));
+            comboBoxOutputRawDepth.Items.Add(new ComboboxItemBitNumber("14 bit", 14));
+            comboBoxOutputRawDepth.Items.Add(new ComboboxItemBitNumber("16 bit", 16));
+            comboBoxOutputRawDepth.SelectedIndex = 0;
         }
+
+        struct ComboboxItemBitNumber
+        {
+            public ComboboxItemBitNumber(string displayName, int bit)
+            {
+                DisplayName = displayName;
+                Bit = bit;
+            }
+            public string DisplayName { get; set; }
+            public int Bit { get; set; }
+            // must have this override method to display the right string.
+            public override string ToString()
+            {
+                return DisplayName;
+            }
+        }
+
 
         private void MainForm_Load(object sender, EventArgs e)
         {
@@ -33,24 +57,9 @@ namespace BayerRawImageViewer
                 directorypath = Path.GetDirectoryName(pathname);
                 filename = Path.GetFileNameWithoutExtension(pathname);
 
-
-                if (!getResolution())
+                if (getUserSelections())
                 {
-                    MessageBox.Show("Please enter valid width, height, and stride between 1 and 10000.");
-                    return;
-                }
-                // FIXME: image infomation should get from window form
-                using BayerRaw bayerRaw = new BayerRaw(pathname, this.imgWidth, this.imgHeight, this.imgStride, 10, 1);
-                getBayerSelection();
-                bayerRaw.SetBayerPattern(bayerPattern);
-                Bitmap bmp = bayerRaw.ToBitmap();
-                pictureBox.Image = bmp;
-                pictureBox.SizeMode = PictureBoxSizeMode.Zoom;
-
-                getOutputOption();
-                if (saveUnpackedRaw)
-                {
-                    bayerRaw.saveUnpackRaw(8, directorypath + "/"+ filename + "_unpacke_raw8.raw");
+                    processImage();
                 }
             }
         }
@@ -59,27 +68,42 @@ namespace BayerRawImageViewer
         {
             if (pathname.Length > 0)
             {
-                if (!getResolution())
+                if (getUserSelections())
                 {
-                    MessageBox.Show("Please enter valid width, height, and stride between 1 and 10000.");
-                    return;
-                }
-                // FIXME: image infomation should get from window form
-                using BayerRaw bayerRaw = new BayerRaw(pathname, this.imgWidth, this.imgHeight, this.imgStride, 10, 1);
-                getBayerSelection();
-                bayerRaw.SetBayerPattern(bayerPattern);
-                Bitmap bmp = bayerRaw.ToBitmap();
-                pictureBox.Image = bmp;
-                pictureBox.SizeMode = PictureBoxSizeMode.Zoom;
-
-                getOutputOption();
-                if (saveUnpackedRaw)
-                {
-                    bayerRaw.saveUnpackRaw(8, directorypath + "/" + filename + "_unpacke_raw8.raw");
+                    processImage();
                 }
             }
         }
 
+        private void processImage()
+        {
+            using BayerRaw bayerRaw = new BayerRaw(pathname, this.imgWidth, this.imgHeight, this.imgStride, 10, 1);
+            bayerRaw.SetBayerPattern(bayerPattern);
+            Bitmap bmp = bayerRaw.ToBitmap();
+            pictureBox.Image = bmp;
+            pictureBox.SizeMode = PictureBoxSizeMode.Zoom;
+
+            if (saveUnpackedRaw)
+            {
+                bayerRaw.saveUnpackRaw(outputRawDepth, directorypath + "/" + filename + "_unpacked_raw" + outputRawDepth + ".raw");
+            }
+        }
+
+        private bool getUserSelections()
+        {
+            if (!getResolution())
+            {
+                MessageBox.Show("Please enter valid width, height, and stride between 1 and 10000.");
+                return false;
+            }
+
+            getBayerSelection();
+
+            getOutputOption();
+            outputRawDepth = ((ComboboxItemBitNumber)comboBoxOutputRawDepth.SelectedItem).Bit;
+
+            return true;
+        }
 
         private void getBayerSelection()
         {
@@ -129,11 +153,33 @@ namespace BayerRawImageViewer
             return true;
         }
 
+        private void comboBoxOutputRawDepth_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (pathname.Length > 0)
+            {
+                if (getUserSelections())
+                {
+                    processImage();
+                }
+            }
+        }
+
         private string pathname = "";
         private string directorypath = "", filename = "";
         private ColorConversionCodes bayerPattern = ColorConversionCodes.BayerBG2RGB;
         private int imgWidth, imgHeight, imgStride;
         private bool saveUnpackedRaw = false;
+        private int outputRawDepth = 8;
 
+        private void checkBoxSaveUnpackedRaw_CheckedChanged(object sender, EventArgs e)
+        {
+            if (pathname.Length > 0)
+            {
+                if (getUserSelections())
+                {
+                    processImage();
+                }
+            }
+        }
     }
 }

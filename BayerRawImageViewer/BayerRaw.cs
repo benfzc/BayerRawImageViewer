@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Formats.Asn1;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -67,19 +68,35 @@ namespace BayerRawImageViewer
         public void saveUnpackRaw(int _depth, string _pathname)
         {
             if (unpackedRaw == null) return;
-            if (_depth == 16)
+            switch (_depth)
             {
-                using var fs = File.Open(_pathname, FileMode.Create);
-                unpackedRaw.GetArray(out byte[] data);
+                case 8:
+                case 10:
+                case 12:
+                case 14:
+                case 16:
+                    break;
+                default:
+                    return;
+            }
+
+            using var fs = File.Open(_pathname, FileMode.Create);
+            using var convertedRaw = new Mat();
+            if (_depth == 8)
+            {
+                unpackedRaw.ConvertTo(convertedRaw, MatType.CV_8UC1, 1 / 256.0);
+                convertedRaw.GetArray(out byte[] data);
                 fs.Write(data);
             }
-            else if (_depth == 8)
+            else
             {
-                using var fs = File.Open(_pathname, FileMode.Create);
-                using var raw8 = new Mat();
-                unpackedRaw.ConvertTo(raw8, MatType.CV_8UC1, 1 / 256.0);
-                raw8.GetArray(out byte[] data);
-                fs.Write(data);
+                unpackedRaw.ConvertTo(convertedRaw, MatType.CV_16UC1, 1.0 / (1 << (16 - _depth)));
+                convertedRaw.GetArray(out short[] data);
+                using (BinaryWriter writer = new BinaryWriter(fs))
+                {
+                    foreach (short value in data)
+                        writer.Write(value);
+                }
             }
         }
 

@@ -398,6 +398,7 @@
             comboBoxOutputRawDepth.Size = new Size(77, 25);
             comboBoxOutputRawDepth.TabIndex = 1;
             comboBoxOutputRawDepth.Text = "8 bit";
+            comboBoxOutputRawDepth.SelectedIndexChanged += comboBoxOutputRawDepth_SelectedIndexChanged;
             // 
             // checkBoxSaveUnpackedRaw
             // 
@@ -408,6 +409,7 @@
             checkBoxSaveUnpackedRaw.TabIndex = 0;
             checkBoxSaveUnpackedRaw.Text = "Unpacked Raw";
             checkBoxSaveUnpackedRaw.UseVisualStyleBackColor = true;
+            checkBoxSaveUnpackedRaw.CheckedChanged += checkBoxSaveUnpackedRaw_CheckedChanged;
             // 
             // pictureBox
             // 
