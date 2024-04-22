@@ -378,6 +378,7 @@
             checkBoxSaveJpg.TabIndex = 3;
             checkBoxSaveJpg.Text = "JPEG";
             checkBoxSaveJpg.UseVisualStyleBackColor = true;
+            checkBoxSaveJpg.CheckedChanged += checkBoxSaveJpg_CheckedChanged;
             // 
             // checkBoxSaveBmp
             // 
@@ -388,6 +389,7 @@
             checkBoxSaveBmp.TabIndex = 2;
             checkBoxSaveBmp.Text = "BMP";
             checkBoxSaveBmp.UseVisualStyleBackColor = true;
+            checkBoxSaveBmp.CheckedChanged += checkBoxSaveBmp_CheckedChanged;
             // 
             // comboBoxOutputRawDepth
             // 

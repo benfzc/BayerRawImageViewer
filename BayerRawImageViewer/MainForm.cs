@@ -87,6 +87,14 @@ namespace BayerRawImageViewer
             {
                 bayerRaw.saveUnpackRaw(outputRawDepth, directorypath + "/" + filename + "_unpacked_raw" + outputRawDepth + ".raw");
             }
+            if (saveBmp)
+            {
+                bmp.Save(directorypath + "/" + filename + ".bmp", System.Drawing.Imaging.ImageFormat.Bmp);
+            }
+            if (saveJpeg)
+            {
+                bmp.Save(directorypath + "/" + filename + ".jpg", System.Drawing.Imaging.ImageFormat.Jpeg);
+            }
         }
 
         private bool getUserSelections()
@@ -126,6 +134,24 @@ namespace BayerRawImageViewer
             else
             {
                 saveUnpackedRaw = false;
+            }
+
+            if (checkBoxSaveBmp.Checked)
+            {
+                saveBmp = true;
+            }
+            else
+            {
+                saveBmp = false;
+            }
+
+            if (checkBoxSaveJpg.Checked)
+            {
+                saveJpeg = true;
+            }
+            else
+            {
+                saveJpeg = false;
             }
         }
 
@@ -169,9 +195,33 @@ namespace BayerRawImageViewer
         private ColorConversionCodes bayerPattern = ColorConversionCodes.BayerBG2RGB;
         private int imgWidth, imgHeight, imgStride;
         private bool saveUnpackedRaw = false;
+        private bool saveBmp = false;
+        private bool saveJpeg = false;
         private int outputRawDepth = 8;
 
         private void checkBoxSaveUnpackedRaw_CheckedChanged(object sender, EventArgs e)
+        {
+            if (pathname.Length > 0)
+            {
+                if (getUserSelections())
+                {
+                    processImage();
+                }
+            }
+        }
+
+        private void checkBoxSaveBmp_CheckedChanged(object sender, EventArgs e)
+        {
+            if (pathname.Length > 0)
+            {
+                if (getUserSelections())
+                {
+                    processImage();
+                }
+            }
+        }
+
+        private void checkBoxSaveJpg_CheckedChanged(object sender, EventArgs e)
         {
             if (pathname.Length > 0)
             {
