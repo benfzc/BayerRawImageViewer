@@ -336,6 +336,7 @@
             textBoxOB.Name = "textBoxOB";
             textBoxOB.Size = new Size(96, 24);
             textBoxOB.TabIndex = 2;
+            textBoxOB.Text = "0";
             // 
             // label4
             // 
@@ -355,6 +356,7 @@
             checkBoxAWB.TabIndex = 0;
             checkBoxAWB.Text = "Enable";
             checkBoxAWB.UseVisualStyleBackColor = true;
+            checkBoxAWB.CheckedChanged += checkBoxAWB_CheckedChanged;
             // 
             // groupBoxOutput
             // 

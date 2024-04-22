@@ -55,13 +55,51 @@ namespace BayerRawImageViewer
             bayerPattern = pattern;
         }
 
+        public void toggleAWB(bool _enableAwb, int _ob)
+        {
+            if (_enableAwb)
+            {
+                ob = _ob;
+            }
+            else
+            {
+                ob = 0;
+            }
+            enableAwb = _enableAwb;
+
+        }
+
         public Bitmap ToBitmap()
         {
             using var bgr16BitMat = new Mat(height, width, MatType.CV_16UC3);
             using var bgr8BitMat = new Mat(height, width, MatType.CV_8UC3);
 
-            Cv2.Demosaicing(unpackedRaw, bgr16BitMat, bayerPattern, 3);
-            bgr16BitMat.ConvertTo(bgr8BitMat, MatType.CV_8UC3, 1 / 256.0);
+            if (enableAwb)
+            {
+                using var unpackedRawMinusOb = unpackedRaw - ob;
+                Cv2.Demosaicing(unpackedRawMinusOb, bgr16BitMat, bayerPattern, 3);
+
+                // calculate WB gain
+                Scalar sums = Cv2.Sum(bgr16BitMat);
+                double rGain = sums[1] / (double)sums[2];
+                double bGain = sums[1] / (double)sums[0];
+
+                // apply WB gain
+                Cv2.Split(bgr16BitMat, out var bgrSplit16Bit);
+
+                using var bPlane = bgrSplit16Bit[0] * bGain;
+                using var rPlane = bgrSplit16Bit[2] * rGain;
+                Mat[] planes = { bPlane, bgrSplit16Bit[1], rPlane };
+                using var bgr16BitWBMat = new Mat();
+                Cv2.Merge(planes, bgr16BitWBMat);
+
+                bgr16BitWBMat.ConvertTo(bgr8BitMat, MatType.CV_8UC3, 1 / 256.0);
+            }
+            else {
+                Cv2.Demosaicing(unpackedRaw, bgr16BitMat, bayerPattern, 3);
+                bgr16BitMat.ConvertTo(bgr8BitMat, MatType.CV_8UC3, 1 / 256.0);
+            }
+
             return BitmapConverter.ToBitmap(bgr8BitMat);
         }
 
@@ -131,5 +169,7 @@ namespace BayerRawImageViewer
         private int depth;
         private int type;
         private ColorConversionCodes bayerPattern = ColorConversionCodes.BayerBG2RGB;
+        private bool enableAwb = false;
+        private int ob = 0;
     }
 }

@@ -78,6 +78,7 @@ namespace BayerRawImageViewer
         private void processImage()
         {
             using BayerRaw bayerRaw = new BayerRaw(pathname, this.imgWidth, this.imgHeight, this.imgStride, 10, 1);
+            bayerRaw.toggleAWB(enableAwb, ob);
             bayerRaw.SetBayerPattern(bayerPattern);
             Bitmap bmp = bayerRaw.ToBitmap();
             pictureBox.Image = bmp;
@@ -109,6 +110,25 @@ namespace BayerRawImageViewer
 
             getOutputOption();
             outputRawDepth = ((ComboboxItemBitNumber)comboBoxOutputRawDepth.SelectedItem).Bit;
+
+            if (checkBoxAWB.Checked)
+            {
+                enableAwb = true;
+
+                int level;
+                if (!int.TryParse(textBoxOB.Text, out level) || level < 0 || level > 10000)
+                {
+                    MessageBox.Show("Please enter valid OB between 0 and 10000.");
+                    return false;
+                }
+
+                ob = level;
+            }
+            else
+            {
+                enableAwb = false;
+                ob = 0;
+            }
 
             return true;
         }
@@ -198,6 +218,8 @@ namespace BayerRawImageViewer
         private bool saveBmp = false;
         private bool saveJpeg = false;
         private int outputRawDepth = 8;
+        private bool enableAwb = false;
+        private int ob = 0;
 
         private void checkBoxSaveUnpackedRaw_CheckedChanged(object sender, EventArgs e)
         {
@@ -222,6 +244,17 @@ namespace BayerRawImageViewer
         }
 
         private void checkBoxSaveJpg_CheckedChanged(object sender, EventArgs e)
+        {
+            if (pathname.Length > 0)
+            {
+                if (getUserSelections())
+                {
+                    processImage();
+                }
+            }
+        }
+
+        private void checkBoxAWB_CheckedChanged(object sender, EventArgs e)
         {
             if (pathname.Length > 0)
             {
