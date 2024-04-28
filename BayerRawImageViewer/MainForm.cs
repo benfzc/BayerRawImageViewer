@@ -80,7 +80,12 @@ namespace BayerRawImageViewer
             using BayerRaw bayerRaw = new BayerRaw(pathname, this.imgWidth, this.imgHeight, this.imgStride, 10, 1);
             bayerRaw.toggleAWB(enableAwb, ob);
             bayerRaw.SetBayerPattern(bayerPattern);
-            Bitmap bmp = bayerRaw.ToBitmap();
+ 
+            if (bmp != null)
+            {
+                bmp.Dispose();
+            }
+            bmp = bayerRaw.ToBitmap();
             pictureBox.Image = bmp;
             pictureBox.SizeMode = PictureBoxSizeMode.Zoom;
 
@@ -214,6 +219,7 @@ namespace BayerRawImageViewer
         private string directorypath = "", filename = "";
         private ColorConversionCodes bayerPattern = ColorConversionCodes.BayerBG2RGB;
         private int imgWidth, imgHeight, imgStride;
+        private Bitmap bmp;
         private bool saveUnpackedRaw = false;
         private bool saveBmp = false;
         private bool saveJpeg = false;
