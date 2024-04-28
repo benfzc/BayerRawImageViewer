@@ -104,7 +104,6 @@
             radioButtonTypeUnpacked.Name = "radioButtonTypeUnpacked";
             radioButtonTypeUnpacked.Size = new Size(115, 21);
             radioButtonTypeUnpacked.TabIndex = 2;
-            radioButtonTypeUnpacked.TabStop = true;
             radioButtonTypeUnpacked.Text = "Unpacked Raw";
             radioButtonTypeUnpacked.UseVisualStyleBackColor = true;
             // 
@@ -127,7 +126,6 @@
             radioButtonTypeMipi.Name = "radioButtonTypeMipi";
             radioButtonTypeMipi.Size = new Size(83, 21);
             radioButtonTypeMipi.TabIndex = 0;
-            radioButtonTypeMipi.TabStop = true;
             radioButtonTypeMipi.Text = "MIPI Raw";
             radioButtonTypeMipi.UseVisualStyleBackColor = true;
             // 

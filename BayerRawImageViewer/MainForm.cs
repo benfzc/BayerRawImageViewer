@@ -77,7 +77,7 @@ namespace BayerRawImageViewer
 
         private void processImage()
         {
-            using BayerRaw bayerRaw = new BayerRaw(pathname, this.imgWidth, this.imgHeight, this.imgStride, 10, 1);
+            using BayerRaw bayerRaw = new BayerRaw(pathname, this.imgWidth, this.imgHeight, this.imgStride, depth, rawType);
             bayerRaw.toggleAWB(enableAwb, ob);
             bayerRaw.SetBayerPattern(bayerPattern);
  
@@ -111,6 +111,8 @@ namespace BayerRawImageViewer
                 return false;
             }
 
+            getRawTypeSelection();
+            getDepthSelection();
             getBayerSelection();
 
             getOutputOption();
@@ -138,6 +140,28 @@ namespace BayerRawImageViewer
             return true;
         }
 
+
+        private void getRawTypeSelection()
+        {
+            if (radioButtonTypeMipi.Checked)
+                rawType = BayerRaw.RawType.RawType_MIPI;
+            else if (radioButtonTypePacked.Checked)
+                rawType = BayerRaw.RawType.RawType_Packed;
+            else
+                rawType = BayerRaw.RawType.RawType_Unpacked;
+        }
+
+        private void getDepthSelection()
+        {
+            if (radioButton8bit.Checked)
+                depth = 8;
+            else if (radioButton10bit.Checked)
+                depth = 10;
+            else if (radioButton12bit.Checked)
+                depth = 12;
+            else if (radioButton14bit.Checked)
+                depth = 14;
+        }
         private void getBayerSelection()
         {
             if (radioButtonBayerBG.Checked)
@@ -226,6 +250,8 @@ namespace BayerRawImageViewer
         private int outputRawDepth = 8;
         private bool enableAwb = false;
         private int ob = 0;
+        private BayerRaw.RawType rawType;
+        private int depth;
 
         private void checkBoxSaveUnpackedRaw_CheckedChanged(object sender, EventArgs e)
         {

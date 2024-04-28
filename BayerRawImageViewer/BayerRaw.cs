@@ -8,17 +8,18 @@ using System.Text;
 using System.Threading.Tasks;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
+using OpenCvSharp.Features2D;
 
 namespace BayerRawImageViewer
 {
     internal class BayerRaw: IDisposable
     {
-        public BayerRaw(string pathname, int _width, int _height, int _stride, int _depth, int _type)
+        private void LoadPackedRaw10(string pathname)
         {
-            width = _width; height = _height; stride = _stride; depth = _depth; type = _type;
-
             byte[] data = System.IO.File.ReadAllBytes(pathname);
             unpackedRaw = new Mat(height, width, MatType.CV_16UC1);
+            if (data.Length < stride * height || data.Length < width * 5 / 4 * height)
+                return;
 
             var indexer = unpackedRaw.GetGenericIndexer<ushort>();
             for (int row = 0; row < height; row++)
@@ -47,6 +48,61 @@ namespace BayerRawImageViewer
 
                     offset += 5;
                 }
+            }
+        }
+
+        private void LoadUnpackedRaw(string pathname)
+        {
+            byte[] data = System.IO.File.ReadAllBytes(pathname);
+            unpackedRaw = new Mat(height, width, MatType.CV_16UC1);
+            if (data.Length < stride * height)
+                return;
+
+            if (depth == 8)
+            {
+                var indexer = unpackedRaw.GetGenericIndexer<ushort>();
+                for (int row = 0; row < height; row++)
+                {
+                    int offset = row * stride;
+                    for (int col = 0; col < width;)
+                    {
+                        indexer[row, col++] = (ushort)(data[offset] << 8);
+                        offset++;
+                    }
+                }
+            }
+            else if (depth > 8 && depth <= 16)
+            {
+                int shift = 16 - depth;
+                var indexer = unpackedRaw.GetGenericIndexer<ushort>();
+                for (int row = 0; row < height; row++)
+                {
+                    int offset = row * stride;
+                    for (int col = 0; col < width;)
+                    {
+                        ushort value = 0;
+
+                        value = (ushort)(data[offset + 0] | (data[offset + 1] << 8));
+                        indexer[row, col++] = (ushort)(value << shift);
+
+                        offset += 2;
+                    }
+                }
+            }
+        }
+
+        public BayerRaw(string pathname, int _width, int _height, int _stride, int _depth, RawType _type)
+        {
+            width = _width; height = _height; stride = _stride; depth = _depth; type = _type;
+
+            switch (type)
+            {
+                case RawType.RawType_Packed:
+                    LoadPackedRaw10(pathname);
+                    break;
+                case RawType.RawType_Unpacked:
+                    LoadUnpackedRaw(pathname);
+                    break;
             }
         }
 
@@ -160,14 +216,19 @@ namespace BayerRawImageViewer
         }
 
 
-
+        public enum RawType
+        {
+            RawType_Packed,
+            RawType_MIPI,
+            RawType_Unpacked
+        }
 
         Mat? unpackedRaw;
         private int width;
         private int height;
         private int stride;
         private int depth;
-        private int type;
+        private RawType type;
         private ColorConversionCodes bayerPattern = ColorConversionCodes.BayerBG2RGB;
         private bool enableAwb = false;
         private int ob = 0;
