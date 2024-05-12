@@ -14,6 +14,74 @@ namespace BayerRawImageViewer
 {
     internal class BayerRaw: IDisposable
     {
+        private void LoadPackedRaw14(string pathname)
+        {
+            byte[] data = System.IO.File.ReadAllBytes(pathname);
+            unpackedRaw = new Mat(height, width, MatType.CV_16UC1);
+            if (data.Length < stride * height || data.Length < width * height * 7 / 4)
+                return;
+
+            var indexer = unpackedRaw.GetGenericIndexer<ushort>();
+            for (int row = 0; row < height; row++)
+            {
+                /* convert packed raw14 to unpacked raw16 */
+                int offset = row * stride;
+                for (int col = 0; col < width;)
+                {
+                    ushort value = 0;
+
+                    value = (ushort)data[offset + 0];
+                    value |= (ushort)((data[offset + 1] & 0x3f) << 8);
+                    indexer[row, col++] = (ushort)(value << 2);
+
+                    value = (ushort)((data[offset + 1] & 0xc0) >> 6);
+                    value |= (ushort)((data[offset + 2] & 0xff) << 2);
+                    value |= (ushort)((data[offset + 3] & 0x0f) << 10);
+                    indexer[row, col++] = (ushort)(value << 2);
+
+                    value = (ushort)((data[offset + 3] & 0xf0) >> 4);
+                    value |= (ushort)((data[offset + 4] & 0xff) << 4);
+                    value |= (ushort)((data[offset + 5] & 0x03) << 12);
+                    indexer[row, col++] = (ushort)(value << 2);
+
+                    value = (ushort)((data[offset + 5] & 0xfc) >> 2);
+                    value |= (ushort)((data[offset + 6] & 0xff) << 6);
+                    indexer[row, col++] = (ushort)(value << 2);
+
+
+                    offset += 7;
+                }
+            }
+        }
+
+        private void LoadPackedRaw12(string pathname)
+        {
+            byte[] data = System.IO.File.ReadAllBytes(pathname);
+            unpackedRaw = new Mat(height, width, MatType.CV_16UC1);
+            if (data.Length < stride * height || data.Length < width * height * 3 / 2)
+                return;
+
+            var indexer = unpackedRaw.GetGenericIndexer<ushort>();
+            for (int row = 0; row < height; row++)
+            {
+                /* convert packed raw12 to unpacked raw16 */
+                int offset = row * stride;
+                for (int col = 0; col < width;)
+                {
+                    ushort value = 0;
+
+                    value = (ushort)data[offset + 0];
+                    value |= (ushort)((data[offset + 1] & 0x0f) << 8);
+                    indexer[row, col++] = (ushort)(value << 4);
+
+                    value = (ushort)((data[offset + 1] & 0xf0)  >> 4);
+                    value |= (ushort)((data[offset + 2] & 0xff) << 4);
+                    indexer[row, col++] = (ushort)(value << 4);
+                    offset += 3;
+                }
+            }
+        }
+
         private void LoadPackedRaw10(string pathname)
         {
             byte[] data = System.IO.File.ReadAllBytes(pathname);
@@ -98,7 +166,19 @@ namespace BayerRawImageViewer
             switch (type)
             {
                 case RawType.RawType_Packed:
-                    LoadPackedRaw10(pathname);
+                    switch (depth)
+                    {
+                        case 8:
+                            // the 8-bit unpacked raw and packed raw are exactly the same
+                            LoadUnpackedRaw(pathname); break;
+                        case 10:
+                            LoadPackedRaw10(pathname); break;
+                        case 12:
+                            LoadPackedRaw12(pathname); break;
+                        case 14:
+                            LoadPackedRaw14(pathname); break;
+                    }
+                    
                     break;
                 case RawType.RawType_Unpacked:
                     LoadUnpackedRaw(pathname);

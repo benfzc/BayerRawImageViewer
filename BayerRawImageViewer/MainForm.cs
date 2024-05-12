@@ -74,7 +74,6 @@ namespace BayerRawImageViewer
                 }
             }
         }
-
         private void processImage()
         {
             using BayerRaw bayerRaw = new BayerRaw(pathname, this.imgWidth, this.imgHeight, this.imgStride, depth, rawType);
