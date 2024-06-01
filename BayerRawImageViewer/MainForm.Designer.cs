@@ -51,8 +51,8 @@
             radioButtonBayerRG = new RadioButton();
             radioButtonBayerGR = new RadioButton();
             groupBoxAWB = new GroupBox();
+            checkBoxOBC = new CheckBox();
             textBoxOB = new TextBox();
-            label4 = new Label();
             checkBoxAWB = new CheckBox();
             groupBoxOutput = new GroupBox();
             checkBoxSaveJpg = new CheckBox();
@@ -317,42 +317,44 @@
             // 
             // groupBoxAWB
             // 
+            groupBoxAWB.Controls.Add(checkBoxOBC);
             groupBoxAWB.Controls.Add(textBoxOB);
-            groupBoxAWB.Controls.Add(label4);
             groupBoxAWB.Controls.Add(checkBoxAWB);
             groupBoxAWB.Location = new Point(3, 356);
             groupBoxAWB.Name = "groupBoxAWB";
             groupBoxAWB.Size = new Size(223, 55);
             groupBoxAWB.TabIndex = 3;
             groupBoxAWB.TabStop = false;
-            groupBoxAWB.Text = "AWB";
+            groupBoxAWB.Text = "PostProcess";
+            // 
+            // checkBoxOBC
+            // 
+            checkBoxOBC.AutoSize = true;
+            checkBoxOBC.Location = new Point(92, 26);
+            checkBoxOBC.Name = "checkBoxOBC";
+            checkBoxOBC.Size = new Size(55, 21);
+            checkBoxOBC.TabIndex = 3;
+            checkBoxOBC.Text = "OBC";
+            checkBoxOBC.UseVisualStyleBackColor = true;
+            checkBoxOBC.CheckedChanged += checkBoxOB_CheckedChanged;
             // 
             // textBoxOB
             // 
-            textBoxOB.Location = new Point(118, 24);
+            textBoxOB.Location = new Point(150, 24);
             textBoxOB.MaxLength = 5;
             textBoxOB.Name = "textBoxOB";
-            textBoxOB.Size = new Size(96, 24);
+            textBoxOB.Size = new Size(64, 24);
             textBoxOB.TabIndex = 2;
             textBoxOB.Text = "0";
-            // 
-            // label4
-            // 
-            label4.AutoSize = true;
-            label4.Location = new Point(88, 27);
-            label4.Name = "label4";
-            label4.Size = new Size(27, 17);
-            label4.TabIndex = 1;
-            label4.Text = "OB";
             // 
             // checkBoxAWB
             // 
             checkBoxAWB.AutoSize = true;
             checkBoxAWB.Location = new Point(16, 26);
             checkBoxAWB.Name = "checkBoxAWB";
-            checkBoxAWB.Size = new Size(67, 21);
+            checkBoxAWB.Size = new Size(57, 21);
             checkBoxAWB.TabIndex = 0;
-            checkBoxAWB.Text = "Enable";
+            checkBoxAWB.Text = "AWB";
             checkBoxAWB.UseVisualStyleBackColor = true;
             checkBoxAWB.CheckedChanged += checkBoxAWB_CheckedChanged;
             // 
@@ -372,7 +374,7 @@
             // checkBoxSaveJpg
             // 
             checkBoxSaveJpg.AutoSize = true;
-            checkBoxSaveJpg.Location = new Point(86, 58);
+            checkBoxSaveJpg.Location = new Point(92, 58);
             checkBoxSaveJpg.Name = "checkBoxSaveJpg";
             checkBoxSaveJpg.Size = new Size(57, 21);
             checkBoxSaveJpg.TabIndex = 3;
@@ -479,7 +481,6 @@
         private Label label1;
         private GroupBox groupBoxAWB;
         private TextBox textBoxOB;
-        private Label label4;
         private CheckBox checkBoxAWB;
         private GroupBox groupBoxBayerPattern;
         private RadioButton radioButtonBayerBG;
@@ -491,5 +492,6 @@
         private ComboBox comboBoxOutputRawDepth;
         private CheckBox checkBoxSaveJpg;
         private CheckBox checkBoxSaveBmp;
+        private CheckBox checkBoxOBC;
     }
 }

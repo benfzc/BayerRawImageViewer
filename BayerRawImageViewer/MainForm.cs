@@ -77,9 +77,10 @@ namespace BayerRawImageViewer
         private void processImage()
         {
             using BayerRaw bayerRaw = new BayerRaw(pathname, this.imgWidth, this.imgHeight, this.imgStride, depth, rawType);
-            bayerRaw.toggleAWB(enableAwb, ob);
+            bayerRaw.EnableAwb = enableAwb;
+            bayerRaw.OB = ob;
             bayerRaw.SetBayerPattern(bayerPattern);
- 
+
             if (bmp != null)
             {
                 bmp.Dispose();
@@ -88,17 +89,21 @@ namespace BayerRawImageViewer
             pictureBox.Image = bmp;
             pictureBox.SizeMode = PictureBoxSizeMode.Zoom;
 
+            string outputPathname = directorypath + "/" + filename;
+            if (enableOBC) { outputPathname += "_obc"; }
+            if (enableAwb) { outputPathname += "_awb"; }
+
             if (saveUnpackedRaw)
             {
-                bayerRaw.saveUnpackRaw(outputRawDepth, directorypath + "/" + filename + "_unpacked_raw" + outputRawDepth + ".raw");
+                bayerRaw.saveUnpackRaw(outputRawDepth, outputPathname + "_unpacked" + outputRawDepth + ".raw");
             }
             if (saveBmp)
             {
-                bmp.Save(directorypath + "/" + filename + ".bmp", System.Drawing.Imaging.ImageFormat.Bmp);
+                bmp.Save(outputPathname + ".bmp", System.Drawing.Imaging.ImageFormat.Bmp);
             }
             if (saveJpeg)
             {
-                bmp.Save(directorypath + "/" + filename + ".jpg", System.Drawing.Imaging.ImageFormat.Jpeg);
+                bmp.Save(outputPathname + ".jpg", System.Drawing.Imaging.ImageFormat.Jpeg);
             }
         }
 
@@ -117,10 +122,10 @@ namespace BayerRawImageViewer
             getOutputOption();
             outputRawDepth = ((ComboboxItemBitNumber)comboBoxOutputRawDepth.SelectedItem).Bit;
 
-            if (checkBoxAWB.Checked)
-            {
-                enableAwb = true;
 
+            enableAwb = checkBoxAWB.Checked;
+            if (checkBoxOBC.Checked)
+            {
                 int level;
                 if (!int.TryParse(textBoxOB.Text, out level) || level < 0 || level > 10000)
                 {
@@ -129,11 +134,12 @@ namespace BayerRawImageViewer
                 }
 
                 ob = level;
+                enableOBC = true;
             }
             else
             {
-                enableAwb = false;
                 ob = 0;
+                enableOBC = false;
             }
 
             return true;
@@ -248,6 +254,7 @@ namespace BayerRawImageViewer
         private bool saveJpeg = false;
         private int outputRawDepth = 8;
         private bool enableAwb = false;
+        private bool enableOBC = false;
         private int ob = 0;
         private BayerRaw.RawType rawType;
         private int depth;
@@ -286,6 +293,17 @@ namespace BayerRawImageViewer
         }
 
         private void checkBoxAWB_CheckedChanged(object sender, EventArgs e)
+        {
+            if (pathname.Length > 0)
+            {
+                if (getUserSelections())
+                {
+                    processImage();
+                }
+            }
+        }
+
+        private void checkBoxOB_CheckedChanged(object sender, EventArgs e)
         {
             if (pathname.Length > 0)
             {
