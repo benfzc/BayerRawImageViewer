@@ -14,13 +14,13 @@ namespace BayerRawImageViewer
 {
     internal class BayerRaw: IDisposable
     {
-        private void LoadPackedRaw14(string pathname)
+        private bool LoadPackedRaw14(string pathname)
         {
             byte[] data = System.IO.File.ReadAllBytes(pathname);
-            unpackedRaw = new Mat(height, width, MatType.CV_16UC1);
             if (data.Length < stride * height || data.Length < width * height * 7 / 4)
-                return;
+                return false;
 
+            unpackedRaw = new Mat(height, width, MatType.CV_16UC1);
             var indexer = unpackedRaw.GetGenericIndexer<ushort>();
             for (int row = 0; row < height; row++)
             {
@@ -52,15 +52,17 @@ namespace BayerRawImageViewer
                     offset += 7;
                 }
             }
+
+            return true;
         }
 
-        private void LoadPackedRaw12(string pathname)
+        private bool LoadPackedRaw12(string pathname)
         {
             byte[] data = System.IO.File.ReadAllBytes(pathname);
-            unpackedRaw = new Mat(height, width, MatType.CV_16UC1);
             if (data.Length < stride * height || data.Length < width * height * 3 / 2)
-                return;
+                return false;
 
+            unpackedRaw = new Mat(height, width, MatType.CV_16UC1);
             var indexer = unpackedRaw.GetGenericIndexer<ushort>();
             for (int row = 0; row < height; row++)
             {
@@ -80,15 +82,17 @@ namespace BayerRawImageViewer
                     offset += 3;
                 }
             }
+
+            return true;
         }
 
-        private void LoadPackedRaw10(string pathname)
+        private bool LoadPackedRaw10(string pathname)
         {
             byte[] data = System.IO.File.ReadAllBytes(pathname);
-            unpackedRaw = new Mat(height, width, MatType.CV_16UC1);
             if (data.Length < stride * height || data.Length < width * 5 / 4 * height)
-                return;
+                return false;
 
+            unpackedRaw = new Mat(height, width, MatType.CV_16UC1);
             var indexer = unpackedRaw.GetGenericIndexer<ushort>();
             for (int row = 0; row < height; row++)
             {
@@ -117,15 +121,17 @@ namespace BayerRawImageViewer
                     offset += 5;
                 }
             }
+
+            return true;
         }
 
-        private void LoadUnpackedRaw(string pathname)
+        private bool LoadUnpackedRaw(string pathname)
         {
             byte[] data = System.IO.File.ReadAllBytes(pathname);
-            unpackedRaw = new Mat(height, width, MatType.CV_16UC1);
             if (data.Length < stride * height)
-                return;
+                return false;
 
+            unpackedRaw = new Mat(height, width, MatType.CV_16UC1);
             if (depth == 8)
             {
                 var indexer = unpackedRaw.GetGenericIndexer<ushort>();
@@ -157,11 +163,19 @@ namespace BayerRawImageViewer
                     }
                 }
             }
+
+            return true;
         }
 
         public BayerRaw(string pathname, int _width, int _height, int _stride, int _depth, RawType _type)
         {
             width = _width; height = _height; stride = _stride; depth = _depth; type = _type;
+            bool readSuccess = false;
+
+            if (!File.Exists(pathname))
+            {
+                throw new ArgumentException("File does not exist.");
+            }
 
             switch (type)
             {
@@ -170,19 +184,24 @@ namespace BayerRawImageViewer
                     {
                         case 8:
                             // the 8-bit unpacked raw and packed raw are exactly the same
-                            LoadUnpackedRaw(pathname); break;
+                            readSuccess = LoadUnpackedRaw(pathname); break;
                         case 10:
-                            LoadPackedRaw10(pathname); break;
+                            readSuccess = LoadPackedRaw10(pathname); break;
                         case 12:
-                            LoadPackedRaw12(pathname); break;
+                            readSuccess = LoadPackedRaw12(pathname); break;
                         case 14:
-                            LoadPackedRaw14(pathname); break;
+                            readSuccess = LoadPackedRaw14(pathname); break;
                     }
                     
                     break;
                 case RawType.RawType_Unpacked:
-                    LoadUnpackedRaw(pathname);
+                    readSuccess = LoadUnpackedRaw(pathname);
                     break;
+            }
+
+            if (!readSuccess)
+            {
+                throw new ArgumentException("The depth or resolution settings might be incorrect.");
             }
         }
 
@@ -225,7 +244,6 @@ namespace BayerRawImageViewer
 
         public void saveUnpackRaw(int _depth, string _pathname)
         {
-            if (unpackedRaw == null) return;
             switch (_depth)
             {
                 case 8:
@@ -269,7 +287,6 @@ namespace BayerRawImageViewer
             if (disposing && unpackedRaw != null)
             {
                 unpackedRaw.Dispose();
-                unpackedRaw = null;
             }
         }
 
@@ -287,7 +304,7 @@ namespace BayerRawImageViewer
             RawType_Unpacked
         }
 
-        Mat? unpackedRaw;
+        Mat unpackedRaw = null!;
         private int width;
         private int height;
         private int stride;

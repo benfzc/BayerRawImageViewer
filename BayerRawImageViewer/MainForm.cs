@@ -42,7 +42,7 @@ namespace BayerRawImageViewer
 
         private void MainForm_DragEnter(object sender, DragEventArgs e)
         {
-            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            if (e.Data != null && e.Data.GetDataPresent(DataFormats.FileDrop))
                 e.Effect = DragDropEffects.All;
             else
                 e.Effect = DragDropEffects.None;
@@ -50,11 +50,12 @@ namespace BayerRawImageViewer
 
         private void MainForm_DragDrop(object sender, DragEventArgs e)
         {
-            string[] s = (string[])e.Data.GetData(DataFormats.FileDrop, false);
-            if (s.Length > 0)
+            if (e.Data == null || !e.Data.GetDataPresent(DataFormats.FileDrop)) return;
+            string[]? s = e.Data.GetData(DataFormats.FileDrop, false) as string[];
+            if (s != null && s.Length > 0)
             {
                 pathname = s[0];
-                directorypath = Path.GetDirectoryName(pathname);
+                directorypath = Path.GetDirectoryName(pathname) ?? Environment.CurrentDirectory;
                 filename = Path.GetFileNameWithoutExtension(pathname);
 
                 if (getUserSelections())
@@ -68,7 +69,8 @@ namespace BayerRawImageViewer
         {
             if (pathname.Length > 0)
             {
-                if (getUserSelections())
+                RadioButton? radioButton = sender as RadioButton;
+                if (radioButton != null && radioButton.Checked && getUserSelections())
                 {
                     processImage();
                 }
@@ -76,7 +78,19 @@ namespace BayerRawImageViewer
         }
         private void processImage()
         {
-            using BayerRaw bayerRaw = new BayerRaw(pathname, this.imgWidth, this.imgHeight, this.imgStride, depth, rawType);
+            BayerRaw bayerRaw;
+
+            try
+            {
+                bayerRaw = new BayerRaw(pathname, this.imgWidth, this.imgHeight, this.imgStride, depth, rawType);
+            }
+            catch (ArgumentException ex)
+            {
+                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK);
+                return;
+            }
+
+
             bayerRaw.EnableAwb = enableAwb;
             bayerRaw.OB = ob;
             bayerRaw.SetBayerPattern(bayerPattern);
@@ -105,6 +119,8 @@ namespace BayerRawImageViewer
             {
                 bmp.Save(outputPathname + ".jpg", System.Drawing.Imaging.ImageFormat.Jpeg);
             }
+
+            bayerRaw.Dispose();
         }
 
         private bool getUserSelections()
@@ -120,8 +136,8 @@ namespace BayerRawImageViewer
             getBayerSelection();
 
             getOutputOption();
-            outputRawDepth = ((ComboboxItemBitNumber)comboBoxOutputRawDepth.SelectedItem).Bit;
-
+            ComboboxItemBitNumber selectedItem = (ComboboxItemBitNumber)comboBoxOutputRawDepth.SelectedItem!;
+            outputRawDepth = selectedItem.Bit;
 
             enableAwb = checkBoxAWB.Checked;
             if (checkBoxOBC.Checked)
@@ -248,7 +264,7 @@ namespace BayerRawImageViewer
         private string directorypath = "", filename = "";
         private ColorConversionCodes bayerPattern = ColorConversionCodes.BayerBG2RGB;
         private int imgWidth, imgHeight, imgStride;
-        private Bitmap bmp;
+        private Bitmap? bmp;
         private bool saveUnpackedRaw = false;
         private bool saveBmp = false;
         private bool saveJpeg = false;
