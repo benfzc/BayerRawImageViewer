@@ -436,6 +436,7 @@
             Controls.Add(pictureBox);
             Name = "MainForm";
             Text = "Bayer Raw Image Viewer";
+            FormClosing += MainForm_FormClosing;
             Load += MainForm_Load;
             DragDrop += MainForm_DragDrop;
             DragEnter += MainForm_DragEnter;

@@ -1,4 +1,5 @@
 using OpenCvSharp;
+using System.Configuration;
 using System.Windows.Forms;
 
 namespace BayerRawImageViewer
@@ -15,6 +16,166 @@ namespace BayerRawImageViewer
             comboBoxOutputRawDepth.Items.Add(new ComboboxItemBitNumber("14 bit", 14));
             comboBoxOutputRawDepth.Items.Add(new ComboboxItemBitNumber("16 bit", 16));
             comboBoxOutputRawDepth.SelectedIndex = 0;
+
+            restoreUserSelections();
+        }
+        void restoreUserSelections()
+        {
+            // Output image Depth
+            var OutDepthStr = ConfigurationManager.AppSettings["OutputImageDepth"];
+            if (OutDepthStr != null)
+            {
+                int depth;
+                if (int.TryParse(OutDepthStr, out depth))
+                {
+                    switch (depth)
+                    {
+                        case 8:
+                            comboBoxOutputRawDepth.SelectedIndex = 0;
+                            break;
+                        case 10: // pass through
+                        default:
+                            comboBoxOutputRawDepth.SelectedIndex = 1;
+                            break;
+                        case 12:
+                            comboBoxOutputRawDepth.SelectedIndex = 2;
+                            break;
+                        case 14:
+                            comboBoxOutputRawDepth.SelectedIndex = 3;
+                            break;
+                        case 16:
+                            comboBoxOutputRawDepth.SelectedIndex = 4;
+                            break;
+                    }
+                }
+            }
+
+
+            // Raw Type
+            var RawTypeStr = ConfigurationManager.AppSettings["RawType"];
+            if (RawTypeStr != null)
+            {
+                switch (RawTypeStr)
+                {
+                    case "MIPI":
+                        radioButtonTypeMipi.Checked = true;
+                        break;
+                    case "Packed": // pass through
+                    default:
+                        radioButtonTypePacked.Checked = true;
+                        break;
+                    case "Unpacked":
+                        radioButtonTypeUnpacked.Checked = true;
+                        break;
+                }
+            }
+
+            // Resolution
+            var ImageWidth = ConfigurationManager.AppSettings["ImageWidth"];
+            if (ImageWidth != null) { textBoxWidth.Text = ImageWidth; }
+
+            var ImageHeight = ConfigurationManager.AppSettings["ImageHeight"];
+            if (ImageHeight != null) { textBoxHeight.Text = ImageHeight; }
+
+            var ImageStride = ConfigurationManager.AppSettings["ImageStride"];
+            if (ImageStride != null) { textBoxStride.Text = ImageStride; }
+
+            // Input image Depth
+            var DepthStr = ConfigurationManager.AppSettings["InputImageDepth"];
+            if (DepthStr != null)
+            {
+                int depth;
+                if (int.TryParse(DepthStr, out depth))
+                {
+                    switch (depth)
+                    {
+                        case 8:
+                            radioButton8bit.Checked = true;
+                            break;
+                        case 10: // pass through
+                        default:
+                            radioButton10bit.Checked = true;
+                            break;
+                        case 12:
+                            radioButton12bit.Checked = true;
+                            break;
+                        case 14:
+                            radioButton14bit.Checked = true;
+                            break;
+                    }
+                }
+            }
+
+            // Bayer Pattern format
+            var BayerPatternStr = ConfigurationManager.AppSettings["BayerPattern"];
+            if (BayerPatternStr != null)
+            {
+                switch (BayerPatternStr)
+                {
+                    case "BG":
+                        radioButtonBayerBG.Checked = true;
+                        break;
+                    case "GB":
+                        radioButtonBayerGB.Checked = true;
+                        break;
+                    case "RG":
+                        radioButtonBayerRG.Checked = true;
+                        break;
+                    case "GR":
+                        radioButtonBayerGR.Checked = true;
+                        break;
+                }
+            }
+
+            // Post processing
+            var EnableAWBStr = ConfigurationManager.AppSettings["EnableAWB"];
+            if (EnableAWBStr != null)
+            {
+                if (EnableAWBStr.Equals("true", StringComparison.OrdinalIgnoreCase))
+                    checkBoxAWB.Checked = true;
+                else
+                    checkBoxAWB.Checked = false;
+            }
+
+            var EnableOBCStr = ConfigurationManager.AppSettings["EnableOBC"];
+            if (EnableOBCStr != null)
+            {
+                if (EnableOBCStr.Equals("true", StringComparison.OrdinalIgnoreCase))
+                    checkBoxOBC.Checked = true;
+                else
+                    checkBoxOBC.Checked = false;
+            }
+
+            var BlackLevelStr = ConfigurationManager.AppSettings["BlackLevel"];
+            if (BlackLevelStr != null) { textBoxOB.Text = BlackLevelStr; }
+
+            // Output
+            var SaveUnpackedRawStr = ConfigurationManager.AppSettings["SaveUnpackedRaw"];
+            if (SaveUnpackedRawStr != null)
+            {
+                if (SaveUnpackedRawStr.Equals("true", StringComparison.OrdinalIgnoreCase))
+                    checkBoxSaveUnpackedRaw.Checked = true;
+                else
+                    checkBoxSaveUnpackedRaw.Checked = false;
+            }
+
+            var SaveBmpStr = ConfigurationManager.AppSettings["SaveBmp"];
+            if (SaveBmpStr != null)
+            {
+                if (SaveBmpStr.Equals("true", StringComparison.OrdinalIgnoreCase))
+                    checkBoxSaveBmp.Checked = true;
+                else
+                    checkBoxSaveBmp.Checked = false;
+            }
+
+            var SaveJpegStr = ConfigurationManager.AppSettings["SaveJpeg"];
+            if (SaveJpegStr != null)
+            {
+                if (SaveJpegStr.Equals("true", StringComparison.OrdinalIgnoreCase))
+                    checkBoxSaveJpg.Checked = true;
+                else
+                    checkBoxSaveJpg.Checked = false;
+            }
         }
 
         struct ComboboxItemBitNumber
@@ -125,11 +286,7 @@ namespace BayerRawImageViewer
 
         private bool getUserSelections()
         {
-            if (!getResolution())
-            {
-                MessageBox.Show("Please enter valid width, height, and stride between 1 and 10000.");
-                return false;
-            }
+            getResolution();
 
             getRawTypeSelection();
             getDepthSelection();
@@ -145,8 +302,7 @@ namespace BayerRawImageViewer
                 int level;
                 if (!int.TryParse(textBoxOB.Text, out level) || level < 0 || level > 10000)
                 {
-                    MessageBox.Show("Please enter valid OB between 0 and 10000.");
-                    return false;
+                    level = 0;
                 }
 
                 ob = level;
@@ -328,6 +484,83 @@ namespace BayerRawImageViewer
                     processImage();
                 }
             }
+        }
+
+        private void updateAppSetting(ref KeyValueConfigurationCollection settings, string key, string value)
+        {
+            if (settings[key] == null)
+            {
+                settings.Add(key, value);
+            }
+            else
+            {
+                settings[key].Value = value;
+            }
+        }
+
+        private void saveUserSelections()
+        {
+            var configFile = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+            var settings = configFile.AppSettings.Settings;
+
+            // Raw Type
+            string RawTypeStr;
+            switch (rawType)
+            {
+                case BayerRaw.RawType.RawType_MIPI:
+                    RawTypeStr = "MIPI"; break;
+                case BayerRaw.RawType.RawType_Packed:
+                    RawTypeStr = "Packed"; break;
+                case BayerRaw.RawType.RawType_Unpacked:
+                default:
+                    RawTypeStr = "Unpacked"; break;
+            }
+            updateAppSetting(ref settings, "RawType", RawTypeStr);
+
+            // Resolution
+            updateAppSetting(ref settings, "ImageWidth", imgWidth.ToString());
+            updateAppSetting(ref settings, "ImageHeight", imgHeight.ToString());
+            updateAppSetting(ref settings, "ImageStride", imgStride.ToString());
+
+            // Input Image Depth
+            updateAppSetting(ref settings, "InputImageDepth", depth.ToString());
+
+            // Bayer Pattern
+            string bayerPatternStr;
+            switch (bayerPattern)
+            {
+                case ColorConversionCodes.BayerBG2RGB:
+                    bayerPatternStr = "BG"; break;
+                case ColorConversionCodes.BayerRG2RGB:
+                    bayerPatternStr = "RG"; break;
+                case ColorConversionCodes.BayerGR2RGB:
+                    bayerPatternStr = "GR"; break;
+                case ColorConversionCodes.BayerGB2RGB:
+                default:
+                    bayerPatternStr = "GB"; break;
+            }
+            updateAppSetting(ref settings, "BayerPattern", bayerPatternStr);
+
+            // Post processing
+            updateAppSetting(ref settings, "EnableAWB", enableAwb.ToString());
+            updateAppSetting(ref settings, "EnableOBC", enableOBC.ToString());
+            updateAppSetting(ref settings, "BlackLevel", ob.ToString());
+
+            // Output
+            updateAppSetting(ref settings, "SaveUnpackedRaw", saveUnpackedRaw.ToString());
+            updateAppSetting(ref settings, "SaveBmp", saveBmp.ToString());
+            updateAppSetting(ref settings, "SaveJpeg", saveJpeg.ToString());
+
+            // Output Image Depth
+            updateAppSetting(ref settings, "OutputImageDepth", outputRawDepth.ToString());
+
+            configFile.Save(ConfigurationSaveMode.Modified);
+        }
+
+        private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            getUserSelections();
+            saveUserSelections();
         }
     }
 }
