@@ -167,6 +167,101 @@ namespace BayerRawImageViewer
             return true;
         }
 
+        private bool LoadMIPIRaw10(string pathname)
+        {
+            byte[] data = System.IO.File.ReadAllBytes(pathname);
+            if (data.Length < stride * height || data.Length < width * 5 / 4 * height)
+                return false;
+
+            unpackedRaw = new Mat(height, width, MatType.CV_16UC1);
+            var indexer = unpackedRaw.GetGenericIndexer<ushort>();
+            for (int row = 0; row < height; row++)
+            {
+                /* convert MIPI raw10 to unpacked raw16 */
+                int offset = row * stride;
+                for (int col = 0; col < width; col += 4)
+                {
+                    // read 4 10-bit pixels
+                    ushort p0 = (ushort)(data[offset] << 2 | (data[offset + 4] & 0x03));
+                    ushort p1 = (ushort)(data[offset + 1] << 2 | ((data[offset + 4] & 0x0C) >> 2));
+                    ushort p2 = (ushort)(data[offset + 2] << 2 | ((data[offset + 4] & 0x30) >> 4));
+                    ushort p3 = (ushort)(data[offset + 3] << 2 | ((data[offset + 4] & 0xC0) >> 6));
+
+                    // convert 10-bit pixels to 16-bit pixel
+                    indexer[row, col] = (ushort)(p0 << 6);
+                    indexer[row, col + 1] = (ushort)(p1 << 6);
+                    indexer[row, col + 2] = (ushort)(p2 << 6);
+                    indexer[row, col + 3] = (ushort)(p3 << 6);
+
+                    offset += 5;
+                }
+            }
+
+            return true;
+        }
+
+        private bool LoadMIPIRaw12(string pathname)
+        {
+            byte[] data = System.IO.File.ReadAllBytes(pathname);
+            if (data.Length < stride * height || data.Length < width * 3 / 2 * height)
+                return false;
+
+            unpackedRaw = new Mat(height, width, MatType.CV_16UC1);
+            var indexer = unpackedRaw.GetGenericIndexer<ushort>();
+            for (int row = 0; row < height; row++)
+            {
+                /* convert MIPI raw12 to unpacked raw16 */
+                int offset = row * stride;
+                for (int col = 0; col < width; col += 2)
+                {
+                    // read 2 12-bit pixels
+                    ushort p0 = (ushort)((data[offset] << 4) | ((data[offset + 2] & 0x0F)));
+                    ushort p1 = (ushort)((data[offset + 1] << 4) | ((data[offset + 2] & 0xF0) >> 4));
+
+                    // convert 12-bit pixels to 16-bit pixel
+                    indexer[row, col] = (ushort)(p0 << 4);
+                    indexer[row, col + 1] = (ushort)(p1 << 4);
+
+                    offset += 3;
+                }
+            }
+
+            return true;
+        }
+
+        private bool LoadMIPIRaw14(string pathname)
+        {
+            byte[] data = System.IO.File.ReadAllBytes(pathname);
+            if (data.Length < stride * height || data.Length < width * 7 / 4 * height)
+                return false;
+
+            unpackedRaw = new Mat(height, width, MatType.CV_16UC1);
+            var indexer = unpackedRaw.GetGenericIndexer<ushort>();
+            for (int row = 0; row < height; row++)
+            {
+                /* convert MIPI raw14 to unpacked raw16 */
+                int offset = row * stride;
+                for (int col = 0; col < width; col += 4)
+                {
+                    // read 4 14-bit pixels
+                    ushort p0 = (ushort)((data[offset] << 6) | (data[offset + 4] & 0x3F));
+                    ushort p1 = (ushort)((data[offset + 1] << 6) | ((data[offset + 4] & 0xC0) >> 6) | ((data[offset + 5] & 0x0F) << 2));
+                    ushort p2 = (ushort)((data[offset + 2] << 6) | ((data[offset + 5] & 0xF0) >> 4) | ((data[offset + 6] & 0x03) << 4));
+                    ushort p3 = (ushort)((data[offset + 3] << 6) | ((data[offset + 6] & 0xFC) >> 2));
+
+                    // convert 14-bit pixels to 16-bit pixel
+                    indexer[row, col] = (ushort)(p0 << 2);
+                    indexer[row, col + 1] = (ushort)(p1 << 2);
+                    indexer[row, col + 2] = (ushort)(p2 << 2);
+                    indexer[row, col + 3] = (ushort)(p3 << 2);
+
+                    offset += 7;
+                }
+            }
+
+            return true;
+        }
+
         public BayerRaw(string pathname, int _width, int _height, int _stride, int _depth, RawType _type)
         {
             width = _width; height = _height; stride = _stride; depth = _depth; type = _type;
@@ -196,6 +291,23 @@ namespace BayerRawImageViewer
                     break;
                 case RawType.RawType_Unpacked:
                     readSuccess = LoadUnpackedRaw(pathname);
+                    break;
+                case RawType.RawType_MIPI:
+                    switch (depth)
+                    {
+                        case 8:
+                            readSuccess = LoadUnpackedRaw(pathname);
+                            break;
+                        case 10:
+                            readSuccess = LoadMIPIRaw10(pathname);
+                            break;
+                        case 12:
+                            readSuccess = LoadMIPIRaw12(pathname);
+                            break;
+                        case 14:
+                            readSuccess = LoadMIPIRaw14(pathname);
+                            break;
+                    }
                     break;
             }
 
