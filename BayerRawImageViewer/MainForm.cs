@@ -393,7 +393,7 @@ namespace BayerRawImageViewer
             {
                 return false;
             }
-            if (!int.TryParse(textBoxStride.Text, out stride) || stride < 1 || stride > 10000)
+            if (!int.TryParse(textBoxStride.Text, out stride) || stride < 1 || stride > 20000)
             {
                 return false;
             }
