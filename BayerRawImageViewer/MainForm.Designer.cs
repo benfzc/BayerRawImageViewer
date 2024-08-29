@@ -206,7 +206,7 @@
             textBoxStride.MaxLength = 5;
             textBoxStride.Name = "textBoxStride";
             textBoxStride.Size = new Size(110, 24);
-            textBoxStride.TabIndex = 1;
+            textBoxStride.TabIndex = 2;
             textBoxStride.Text = "5280";
             // 
             // textBoxHeight
@@ -226,7 +226,7 @@
             textBoxWidth.MaxLength = 5;
             textBoxWidth.Name = "textBoxWidth";
             textBoxWidth.Size = new Size(110, 24);
-            textBoxWidth.TabIndex = 1;
+            textBoxWidth.TabIndex = 0;
             textBoxWidth.Text = "4224";
             // 
             // label3
@@ -265,7 +265,7 @@
             groupBoxBayerPattern.Location = new Point(3, 298);
             groupBoxBayerPattern.Name = "groupBoxBayerPattern";
             groupBoxBayerPattern.Size = new Size(221, 54);
-            groupBoxBayerPattern.TabIndex = 4;
+            groupBoxBayerPattern.TabIndex = 3;
             groupBoxBayerPattern.TabStop = false;
             groupBoxBayerPattern.Text = "Bayper Pattern";
             // 
@@ -323,7 +323,7 @@
             groupBoxAWB.Location = new Point(3, 356);
             groupBoxAWB.Name = "groupBoxAWB";
             groupBoxAWB.Size = new Size(223, 55);
-            groupBoxAWB.TabIndex = 3;
+            groupBoxAWB.TabIndex = 4;
             groupBoxAWB.TabStop = false;
             groupBoxAWB.Text = "PostProcess";
             // 
@@ -333,7 +333,7 @@
             checkBoxOBC.Location = new Point(92, 26);
             checkBoxOBC.Name = "checkBoxOBC";
             checkBoxOBC.Size = new Size(55, 21);
-            checkBoxOBC.TabIndex = 3;
+            checkBoxOBC.TabIndex = 1;
             checkBoxOBC.Text = "OBC";
             checkBoxOBC.UseVisualStyleBackColor = true;
             checkBoxOBC.CheckedChanged += checkBoxOB_CheckedChanged;
