@@ -58,8 +58,8 @@ namespace BayerRawImageViewer.Tests
             using var input = new TempFile();
             using var output = new TempFile();
 
-            using (var bayerRaw = TestHelpers.LoadBayerRaw(input, pixels, width, height, depth, RawType.RawType_Unpacked))
-                bayerRaw.saveUnpackRaw(outputDepth, output.Path);
+            var bayerRaw = TestHelpers.LoadBayerRaw(input, pixels, width, height, depth, RawType.RawType_Unpacked);
+            bayerRaw.saveUnpackRaw(outputDepth, output.Path);
 
             byte[] expected = OpenCvReference.UnpackedRawFile(TestHelpers.ToRaw16(pixels, depth), width, height, outputDepth);
             Assert.Equal(expected, File.ReadAllBytes(output.Path));
@@ -68,7 +68,7 @@ namespace BayerRawImageViewer.Tests
         private static void AssertBitmapMatches(ushort[] pixels, int width, int height, int depth, string label, bool awb, int ob)
         {
             using var file = new TempFile();
-            using var bayerRaw = TestHelpers.LoadBayerRaw(file, pixels, width, height, depth, RawType.RawType_Unpacked);
+            var bayerRaw = TestHelpers.LoadBayerRaw(file, pixels, width, height, depth, RawType.RawType_Unpacked);
             bayerRaw.EnableAwb = awb;
             bayerRaw.OB = ob;
             TestHelpers.SetBayerPattern(bayerRaw, label);

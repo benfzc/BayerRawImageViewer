@@ -38,7 +38,7 @@ namespace BayerRawImageViewer.Tests
             for (int i = 0; i <= Iterations; i++)
             {
                 var sw = Stopwatch.StartNew();
-                using var bayerRaw = new BayerRaw(file.Path, Width, Height, Stride, Depth, RawType.RawType_Packed);
+                var bayerRaw = new BayerRaw(file.Path, Width, Height, Stride, Depth, RawType.RawType_Packed);
                 double load = sw.Elapsed.TotalMilliseconds;
 
                 bayerRaw.EnableAwb = true;

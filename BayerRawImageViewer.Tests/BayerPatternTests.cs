@@ -47,7 +47,7 @@ namespace BayerRawImageViewer.Tests
                     pixels[y * Width + x] = 255;
 
             using var file = new TempFile();
-            using var bayerRaw = TestHelpers.LoadBayerRaw(file, pixels, Width, Height, Depth, RawType.RawType_Unpacked);
+            var bayerRaw = TestHelpers.LoadBayerRaw(file, pixels, Width, Height, Depth, RawType.RawType_Unpacked);
             TestHelpers.SetBayerPattern(bayerRaw, label);
 
             using var bmp = bayerRaw.ToBitmap();

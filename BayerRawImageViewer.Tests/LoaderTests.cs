@@ -33,8 +33,8 @@ namespace BayerRawImageViewer.Tests
             using var input = new TempFile();
             using var output = new TempFile();
 
-            using (var bayerRaw = TestHelpers.LoadBayerRaw(input, pixels, Width, Height, depth, type))
-                bayerRaw.saveUnpackRaw(16, output.Path);
+            var bayerRaw = TestHelpers.LoadBayerRaw(input, pixels, Width, Height, depth, type);
+            bayerRaw.saveUnpackRaw(16, output.Path);
 
             byte[] bytes = File.ReadAllBytes(output.Path);
             var decoded = new ushort[Width * Height];

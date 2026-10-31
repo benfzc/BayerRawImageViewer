@@ -49,7 +49,14 @@ namespace BayerRawImageViewer.Tests
         /// </summary>
         public static void SetBayerPattern(BayerRaw bayerRaw, string uiLabel)
         {
-            bayerRaw.SetBayerPattern(OpenCvReference.ToOpenCvCode(uiLabel));
+            bayerRaw.SetBayerPattern(uiLabel switch
+            {
+                "BG" => BayerPattern.BGGR,
+                "RG" => BayerPattern.RGGB,
+                "GR" => BayerPattern.GRBG,
+                "GB" => BayerPattern.GBRG,
+                _ => throw new ArgumentException($"Unknown Bayer label {uiLabel}"),
+            });
         }
 
         /// <summary>Returns the bitmap as tightly packed B, G, R bytes.</summary>
