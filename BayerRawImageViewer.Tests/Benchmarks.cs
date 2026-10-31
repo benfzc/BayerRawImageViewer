@@ -61,6 +61,39 @@ namespace BayerRawImageViewer.Tests
             output.WriteLine($"ToBitmap : median {Median(bitmapTimes),7:F1} ms");
         }
 
+        [Fact]
+        public void Stages_5120x2880()
+        {
+            var rng = new Random(0);
+            var raw = new ushort[Width * Height];
+            for (int i = 0; i < raw.Length; i++)
+                raw[i] = (ushort)(rng.Next(1 << Depth) << (16 - Depth));
+
+            ushort[] blackLevelRemoved = raw, bgr = raw;
+            (double Blue, double Red) gains = (1.0, 1.0);
+
+            output.WriteLine($"CPU cores: {Environment.ProcessorCount}, iterations: {Iterations}");
+            Measure("SubtractBlackLevel", () => blackLevelRemoved = ImageProcessing.SubtractBlackLevel(raw, 64 << (16 - Depth)));
+            Measure("DemosaicBilinear  ", () => bgr = ImageProcessing.DemosaicBilinear(blackLevelRemoved, Width, Height, BayerPattern.GBRG));
+            Measure("GrayWorldGains    ", () => gains = ImageProcessing.ComputeGrayWorldGains(bgr));
+            Measure("ToBgr8            ", () => ImageProcessing.ToBgr8(bgr, gains.Blue, gains.Red));
+        }
+
+        // Run once as a warm-up, then print the median of the timed runs
+        private void Measure(string name, Action step)
+        {
+            step();
+            var times = new List<double>();
+            for (int i = 0; i < Iterations; i++)
+            {
+                var sw = Stopwatch.StartNew();
+                step();
+                times.Add(sw.Elapsed.TotalMilliseconds);
+            }
+
+            output.WriteLine($"{name} : median {Median(times),7:F1} ms");
+        }
+
         private static double Median(List<double> values)
         {
             var sorted = values.OrderBy(v => v).ToList();

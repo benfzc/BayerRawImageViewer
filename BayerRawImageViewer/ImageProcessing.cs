@@ -127,14 +127,20 @@ namespace BayerRawImageViewer
         /// </summary>
         public static byte[] ToBgr8(ushort[] bgr, double blueGain, double redGain)
         {
+            // The result depends only on the 16-bit input value, so compute it
+            // once for every possible value and look it up per pixel
+            byte[] blueTable = BuildTo8BitTable(blueGain);
+            byte[] greenTable = BuildTo8BitTable(1.0);
+            byte[] redTable = BuildTo8BitTable(redGain);
+
             var result = NewImage<byte>(bgr.Length);
             ForEachRange(bgr.Length / 3, (start, end) =>
             {
                 for (int i = start * 3; i < end * 3; i += 3)
                 {
-                    result[i] = To8Bit(ApplyGain(bgr[i], blueGain));
-                    result[i + 1] = To8Bit(bgr[i + 1]);
-                    result[i + 2] = To8Bit(ApplyGain(bgr[i + 2], redGain));
+                    result[i] = blueTable[bgr[i]];
+                    result[i + 1] = greenTable[bgr[i + 1]];
+                    result[i + 2] = redTable[bgr[i + 2]];
                 }
             });
             return result;
@@ -181,6 +187,15 @@ namespace BayerRawImageViewer
         }
 
         private static double Gain(long target, long sum) => sum == 0 ? 1.0 : (double)target / sum;
+
+        // Table of To8Bit(ApplyGain(v, gain)) for every 16-bit value v
+        private static byte[] BuildTo8BitTable(double gain)
+        {
+            var table = new byte[ushort.MaxValue + 1];
+            for (int v = 0; v < table.Length; v++)
+                table[v] = To8Bit(ApplyGain((ushort)v, gain));
+            return table;
+        }
 
         // Gain is applied at 16 bits, then scaled to 8 bits: two roundings, as in the OpenCV version
         private static ushort ApplyGain(ushort value, double gain) => SaturateToUInt16(value * gain);

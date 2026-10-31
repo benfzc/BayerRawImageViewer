@@ -8,13 +8,15 @@ namespace BayerRawImageViewer
     /// A Bayer raw image loaded from file. Pixels are kept as 16-bit values,
     /// MSB-aligned (a 10-bit value v is stored as v &lt;&lt; 6), one per pixel, row-major.
     ///
-    /// Bit diagrams below use letters for pixels in file order: A is the 1st pixel
-    /// of a group, B the 2nd, and so on; A0 is the LSB of pixel A.
+    /// Each loader decodes one group of pixels at a time. Bit diagrams use letters
+    /// for pixels in file order (A is the 1st pixel of a group, B the 2nd, ...);
+    /// A0 is the LSB of pixel A.
     /// </summary>
     internal class BayerRaw
     {
         /// <summary>
-        /// Packed RAW14: a continuous LSB-first bit stream, 4 pixels in 7 bytes.
+        /// Packed RAW14: all pixels form one continuous LSB-first bit stream.
+        /// 4 pixels fill 7 bytes exactly.
         ///   bit     7   6   5   4   3   2   1   0
         ///   byte 0  A7  A6  A5  A4  A3  A2  A1  A0
         ///   byte 1  B1  B0  A13 A12 A11 A10 A9  A8
@@ -33,21 +35,21 @@ namespace BayerRawImageViewer
             unpackedRaw = new ushort[width * height];
             for (int row = 0; row < height; row++)
             {
-                Span<ushort> dst = unpackedRaw.AsSpan(row * width, width);
+                int rowStart = row * width;
                 int offset = row * stride;
                 for (int col = 0; col < width; col += 4)
                 {
-                    ReadOnlySpan<byte> b = data.AsSpan(offset, 7);
+                    // 7 bytes = one 56-bit little-endian word; pixel i is bits [14*i, 14*i + 13]
+                    ulong word = LittleEndian(data, offset, 7);
+                    int pixelA = (int)(word >> 0) & 0x3fff;
+                    int pixelB = (int)(word >> 14) & 0x3fff;
+                    int pixelC = (int)(word >> 28) & 0x3fff;
+                    int pixelD = (int)(word >> 42) & 0x3fff;
 
-                    int pixelA = b[0] | (b[1] & 0x3f) << 8;
-                    int pixelB = b[1] >> 6 | b[2] << 2 | (b[3] & 0x0f) << 10;
-                    int pixelC = b[3] >> 4 | b[4] << 4 | (b[5] & 0x03) << 12;
-                    int pixelD = b[5] >> 2 | b[6] << 6;
-
-                    dst[col] = MsbAlign(pixelA);
-                    dst[col + 1] = MsbAlign(pixelB);
-                    dst[col + 2] = MsbAlign(pixelC);
-                    dst[col + 3] = MsbAlign(pixelD);
+                    unpackedRaw[rowStart + col] = MsbAlign(pixelA);
+                    unpackedRaw[rowStart + col + 1] = MsbAlign(pixelB);
+                    unpackedRaw[rowStart + col + 2] = MsbAlign(pixelC);
+                    unpackedRaw[rowStart + col + 3] = MsbAlign(pixelD);
 
                     offset += 7;
                 }
@@ -57,7 +59,8 @@ namespace BayerRawImageViewer
         }
 
         /// <summary>
-        /// Packed RAW12: a continuous LSB-first bit stream, 2 pixels in 3 bytes.
+        /// Packed RAW12: all pixels form one continuous LSB-first bit stream.
+        /// 2 pixels fill 3 bytes exactly.
         ///   bit     7   6   5   4   3   2   1   0
         ///   byte 0  A7  A6  A5  A4  A3  A2  A1  A0
         ///   byte 1  B3  B2  B1  B0  A11 A10 A9  A8
@@ -72,17 +75,17 @@ namespace BayerRawImageViewer
             unpackedRaw = new ushort[width * height];
             for (int row = 0; row < height; row++)
             {
-                Span<ushort> dst = unpackedRaw.AsSpan(row * width, width);
+                int rowStart = row * width;
                 int offset = row * stride;
                 for (int col = 0; col < width; col += 2)
                 {
-                    ReadOnlySpan<byte> b = data.AsSpan(offset, 3);
+                    // 3 bytes = one 24-bit little-endian word; pixel i is bits [12*i, 12*i + 11]
+                    ulong word = LittleEndian(data, offset, 3);
+                    int pixelA = (int)(word >> 0) & 0xfff;
+                    int pixelB = (int)(word >> 12) & 0xfff;
 
-                    int pixelA = b[0] | (b[1] & 0x0f) << 8;
-                    int pixelB = b[1] >> 4 | b[2] << 4;
-
-                    dst[col] = MsbAlign(pixelA);
-                    dst[col + 1] = MsbAlign(pixelB);
+                    unpackedRaw[rowStart + col] = MsbAlign(pixelA);
+                    unpackedRaw[rowStart + col + 1] = MsbAlign(pixelB);
 
                     offset += 3;
                 }
@@ -92,7 +95,8 @@ namespace BayerRawImageViewer
         }
 
         /// <summary>
-        /// Packed RAW10: a continuous LSB-first bit stream, 4 pixels in 5 bytes.
+        /// Packed RAW10: all pixels form one continuous LSB-first bit stream.
+        /// 4 pixels fill 5 bytes exactly.
         ///   bit     7   6   5   4   3   2   1   0
         ///   byte 0  A7  A6  A5  A4  A3  A2  A1  A0
         ///   byte 1  B5  B4  B3  B2  B1  B0  A9  A8
@@ -109,21 +113,21 @@ namespace BayerRawImageViewer
             unpackedRaw = new ushort[width * height];
             for (int row = 0; row < height; row++)
             {
-                Span<ushort> dst = unpackedRaw.AsSpan(row * width, width);
+                int rowStart = row * width;
                 int offset = row * stride;
                 for (int col = 0; col < width; col += 4)
                 {
-                    ReadOnlySpan<byte> b = data.AsSpan(offset, 5);
+                    // 5 bytes = one 40-bit little-endian word; pixel i is bits [10*i, 10*i + 9]
+                    ulong word = LittleEndian(data, offset, 5);
+                    int pixelA = (int)(word >> 0) & 0x3ff;
+                    int pixelB = (int)(word >> 10) & 0x3ff;
+                    int pixelC = (int)(word >> 20) & 0x3ff;
+                    int pixelD = (int)(word >> 30) & 0x3ff;
 
-                    int pixelA = b[0] | (b[1] & 0x03) << 8;
-                    int pixelB = b[1] >> 2 | (b[2] & 0x0f) << 6;
-                    int pixelC = b[2] >> 4 | (b[3] & 0x3f) << 4;
-                    int pixelD = b[3] >> 6 | b[4] << 2;
-
-                    dst[col] = MsbAlign(pixelA);
-                    dst[col + 1] = MsbAlign(pixelB);
-                    dst[col + 2] = MsbAlign(pixelC);
-                    dst[col + 3] = MsbAlign(pixelD);
+                    unpackedRaw[rowStart + col] = MsbAlign(pixelA);
+                    unpackedRaw[rowStart + col + 1] = MsbAlign(pixelB);
+                    unpackedRaw[rowStart + col + 2] = MsbAlign(pixelC);
+                    unpackedRaw[rowStart + col + 3] = MsbAlign(pixelD);
 
                     offset += 5;
                 }
@@ -150,19 +154,19 @@ namespace BayerRawImageViewer
             unpackedRaw = new ushort[width * height];
             for (int row = 0; row < height; row++)
             {
-                Span<ushort> dst = unpackedRaw.AsSpan(row * width, width);
+                int rowStart = row * width;
                 int offset = row * stride;
                 if (depth == 8)
                 {
                     for (int col = 0; col < width; col++)
-                        dst[col] = MsbAlign(data[offset + col]);
+                        unpackedRaw[rowStart + col] = MsbAlign(data[offset + col]);
                 }
                 else if (depth > 8 && depth <= 16)
                 {
                     for (int col = 0; col < width; col++)
                     {
-                        int pixel = data[offset + 2 * col] | data[offset + 2 * col + 1] << 8;
-                        dst[col] = MsbAlign(pixel);
+                        int pixel = (int)LittleEndian(data, offset + 2 * col, 2);
+                        unpackedRaw[rowStart + col] = MsbAlign(pixel);
                     }
                 }
             }
@@ -171,8 +175,8 @@ namespace BayerRawImageViewer
         }
 
         /// <summary>
-        /// MIPI CSI-2 RAW10: 4 pixels in 5 bytes. The 8 MSBs of each pixel come
-        /// first, the last byte collects the 2 LSBs of all four.
+        /// MIPI CSI-2 RAW10: 4 pixels in 5 bytes. Bytes 0-3 hold the 8 MSBs of
+        /// pixels A-D, byte 4 packs the 2 LSBs of all four.
         ///   bit     7   6   5   4   3   2   1   0
         ///   byte 0  A9  A8  A7  A6  A5  A4  A3  A2
         ///   byte 1  B9  B8  B7  B6  B5  B4  B3  B2
@@ -189,21 +193,21 @@ namespace BayerRawImageViewer
             unpackedRaw = new ushort[width * height];
             for (int row = 0; row < height; row++)
             {
-                Span<ushort> dst = unpackedRaw.AsSpan(row * width, width);
+                int rowStart = row * width;
                 int offset = row * stride;
                 for (int col = 0; col < width; col += 4)
                 {
-                    ReadOnlySpan<byte> b = data.AsSpan(offset, 5);
+                    // 2 LSBs of pixel i are bits [2*i, 2*i + 1] of byte 4
+                    int lsbs = data[offset + 4];
+                    int pixelA = (data[offset + 0] << 2) | ((lsbs >> 0) & 0x3);
+                    int pixelB = (data[offset + 1] << 2) | ((lsbs >> 2) & 0x3);
+                    int pixelC = (data[offset + 2] << 2) | ((lsbs >> 4) & 0x3);
+                    int pixelD = (data[offset + 3] << 2) | ((lsbs >> 6) & 0x3);
 
-                    int pixelA = b[0] << 2 | (b[4] & 0x03);
-                    int pixelB = b[1] << 2 | (b[4] & 0x0c) >> 2;
-                    int pixelC = b[2] << 2 | (b[4] & 0x30) >> 4;
-                    int pixelD = b[3] << 2 | (b[4] & 0xc0) >> 6;
-
-                    dst[col] = MsbAlign(pixelA);
-                    dst[col + 1] = MsbAlign(pixelB);
-                    dst[col + 2] = MsbAlign(pixelC);
-                    dst[col + 3] = MsbAlign(pixelD);
+                    unpackedRaw[rowStart + col] = MsbAlign(pixelA);
+                    unpackedRaw[rowStart + col + 1] = MsbAlign(pixelB);
+                    unpackedRaw[rowStart + col + 2] = MsbAlign(pixelC);
+                    unpackedRaw[rowStart + col + 3] = MsbAlign(pixelD);
 
                     offset += 5;
                 }
@@ -213,8 +217,8 @@ namespace BayerRawImageViewer
         }
 
         /// <summary>
-        /// MIPI CSI-2 RAW12: 2 pixels in 3 bytes. The 8 MSBs of each pixel come
-        /// first, the last byte collects the 4 LSBs of both.
+        /// MIPI CSI-2 RAW12: 2 pixels in 3 bytes. Bytes 0-1 hold the 8 MSBs of
+        /// pixels A-B, byte 2 packs the 4 LSBs of both.
         ///   bit     7   6   5   4   3   2   1   0
         ///   byte 0  A11 A10 A9  A8  A7  A6  A5  A4
         ///   byte 1  B11 B10 B9  B8  B7  B6  B5  B4
@@ -229,17 +233,17 @@ namespace BayerRawImageViewer
             unpackedRaw = new ushort[width * height];
             for (int row = 0; row < height; row++)
             {
-                Span<ushort> dst = unpackedRaw.AsSpan(row * width, width);
+                int rowStart = row * width;
                 int offset = row * stride;
                 for (int col = 0; col < width; col += 2)
                 {
-                    ReadOnlySpan<byte> b = data.AsSpan(offset, 3);
+                    // 4 LSBs of pixel i are bits [4*i, 4*i + 3] of byte 2
+                    int lsbs = data[offset + 2];
+                    int pixelA = (data[offset + 0] << 4) | ((lsbs >> 0) & 0xf);
+                    int pixelB = (data[offset + 1] << 4) | ((lsbs >> 4) & 0xf);
 
-                    int pixelA = b[0] << 4 | (b[2] & 0x0f);
-                    int pixelB = b[1] << 4 | (b[2] & 0xf0) >> 4;
-
-                    dst[col] = MsbAlign(pixelA);
-                    dst[col + 1] = MsbAlign(pixelB);
+                    unpackedRaw[rowStart + col] = MsbAlign(pixelA);
+                    unpackedRaw[rowStart + col + 1] = MsbAlign(pixelB);
 
                     offset += 3;
                 }
@@ -249,8 +253,8 @@ namespace BayerRawImageViewer
         }
 
         /// <summary>
-        /// MIPI CSI-2 RAW14: 4 pixels in 7 bytes. The 8 MSBs of each pixel come
-        /// first, the last 3 bytes collect the 6 LSBs of all four.
+        /// MIPI CSI-2 RAW14: 4 pixels in 7 bytes. Bytes 0-3 hold the 8 MSBs of
+        /// pixels A-D, bytes 4-6 pack the 6 LSBs of all four.
         ///   bit     7   6   5   4   3   2   1   0
         ///   byte 0  A13 A12 A11 A10 A9  A8  A7  A6
         ///   byte 1  B13 B12 B11 B10 B9  B8  B7  B6
@@ -269,27 +273,36 @@ namespace BayerRawImageViewer
             unpackedRaw = new ushort[width * height];
             for (int row = 0; row < height; row++)
             {
-                Span<ushort> dst = unpackedRaw.AsSpan(row * width, width);
+                int rowStart = row * width;
                 int offset = row * stride;
                 for (int col = 0; col < width; col += 4)
                 {
-                    ReadOnlySpan<byte> b = data.AsSpan(offset, 7);
+                    // Bytes 4-6 = one 24-bit little-endian word; 6 LSBs of pixel i are bits [6*i, 6*i + 5]
+                    int lsbs = (int)LittleEndian(data, offset + 4, 3);
+                    int pixelA = (data[offset + 0] << 6) | ((lsbs >> 0) & 0x3f);
+                    int pixelB = (data[offset + 1] << 6) | ((lsbs >> 6) & 0x3f);
+                    int pixelC = (data[offset + 2] << 6) | ((lsbs >> 12) & 0x3f);
+                    int pixelD = (data[offset + 3] << 6) | ((lsbs >> 18) & 0x3f);
 
-                    int pixelA = b[0] << 6 | (b[4] & 0x3f);
-                    int pixelB = b[1] << 6 | (b[4] & 0xc0) >> 6 | (b[5] & 0x0f) << 2;
-                    int pixelC = b[2] << 6 | (b[5] & 0xf0) >> 4 | (b[6] & 0x03) << 4;
-                    int pixelD = b[3] << 6 | (b[6] & 0xfc) >> 2;
-
-                    dst[col] = MsbAlign(pixelA);
-                    dst[col + 1] = MsbAlign(pixelB);
-                    dst[col + 2] = MsbAlign(pixelC);
-                    dst[col + 3] = MsbAlign(pixelD);
+                    unpackedRaw[rowStart + col] = MsbAlign(pixelA);
+                    unpackedRaw[rowStart + col + 1] = MsbAlign(pixelB);
+                    unpackedRaw[rowStart + col + 2] = MsbAlign(pixelC);
+                    unpackedRaw[rowStart + col + 3] = MsbAlign(pixelD);
 
                     offset += 7;
                 }
             }
 
             return true;
+        }
+
+        // Combine count bytes starting at offset into one integer, first byte as the least significant
+        private static ulong LittleEndian(byte[] data, int offset, int count)
+        {
+            ulong word = 0;
+            for (int i = count - 1; i >= 0; i--)
+                word = (word << 8) | data[offset + i];
+            return word;
         }
 
         // Scale a value of the input depth to 16 bits
