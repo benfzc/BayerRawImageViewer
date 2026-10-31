@@ -411,7 +411,7 @@ namespace BayerRawImageViewer
 
         // bgr8 holds tightly packed B, G, R bytes; Format24bppRgb uses the same
         // byte order but pads each row to a multiple of 4 bytes, so copy row by row
-        private static Bitmap CreateBitmap(byte[] bgr8, int width, int height)
+        internal static Bitmap CreateBitmap(byte[] bgr8, int width, int height)
         {
             var bmp = new Bitmap(width, height, PixelFormat.Format24bppRgb);
             var bd = bmp.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
