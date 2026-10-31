@@ -5,6 +5,8 @@ VisualStudioVersion = 17.8.34525.116
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BayerRawImageViewer", "BayerRawImageViewer\BayerRawImageViewer.csproj", "{46BBB56E-821E-4E10-B71E-5F6CCF86182E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BayerRawImageViewer.Tests", "BayerRawImageViewer.Tests\BayerRawImageViewer.Tests.csproj", "{0E866988-9003-4095-883E-16424E04C985}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{46BBB56E-821E-4E10-B71E-5F6CCF86182E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{46BBB56E-821E-4E10-B71E-5F6CCF86182E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{46BBB56E-821E-4E10-B71E-5F6CCF86182E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0E866988-9003-4095-883E-16424E04C985}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0E866988-9003-4095-883E-16424E04C985}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0E866988-9003-4095-883E-16424E04C985}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0E866988-9003-4095-883E-16424E04C985}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
