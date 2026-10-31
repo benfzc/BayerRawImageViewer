@@ -1,4 +1,3 @@
-using OpenCvSharp;
 using System.Configuration;
 using System.Windows.Forms;
 
@@ -280,8 +279,6 @@ namespace BayerRawImageViewer
             {
                 bmp.Save(outputPathname + ".jpg", System.Drawing.Imaging.ImageFormat.Jpeg);
             }
-
-            bayerRaw.Dispose();
         }
 
         private bool getUserSelections()
@@ -342,13 +339,13 @@ namespace BayerRawImageViewer
         private void getBayerSelection()
         {
             if (radioButtonBayerBG.Checked)
-                bayerPattern = ColorConversionCodes.BayerBG2RGB;
+                bayerPattern = BayerPattern.BGGR;
             else if (radioButtonBayerRG.Checked)
-                bayerPattern = ColorConversionCodes.BayerRG2RGB;
+                bayerPattern = BayerPattern.RGGB;
             else if (radioButtonBayerGR.Checked)
-                bayerPattern = ColorConversionCodes.BayerGR2RGB;
+                bayerPattern = BayerPattern.GRBG;
             else if (radioButtonBayerGB.Checked)
-                bayerPattern = ColorConversionCodes.BayerGB2RGB;
+                bayerPattern = BayerPattern.GBRG;
         }
 
         private void getOutputOption()
@@ -418,7 +415,7 @@ namespace BayerRawImageViewer
 
         private string pathname = "";
         private string directorypath = "", filename = "";
-        private ColorConversionCodes bayerPattern = ColorConversionCodes.BayerBG2RGB;
+        private BayerPattern bayerPattern = BayerPattern.BGGR;
         private int imgWidth, imgHeight, imgStride;
         private Bitmap? bmp;
         private bool saveUnpackedRaw = false;
@@ -529,13 +526,13 @@ namespace BayerRawImageViewer
             string bayerPatternStr;
             switch (bayerPattern)
             {
-                case ColorConversionCodes.BayerBG2RGB:
+                case BayerPattern.BGGR:
                     bayerPatternStr = "BG"; break;
-                case ColorConversionCodes.BayerRG2RGB:
+                case BayerPattern.RGGB:
                     bayerPatternStr = "RG"; break;
-                case ColorConversionCodes.BayerGR2RGB:
+                case BayerPattern.GRBG:
                     bayerPatternStr = "GR"; break;
-                case ColorConversionCodes.BayerGB2RGB:
+                case BayerPattern.GBRG:
                 default:
                     bayerPatternStr = "GB"; break;
             }

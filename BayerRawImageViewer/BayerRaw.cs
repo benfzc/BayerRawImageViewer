@@ -1,53 +1,55 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Formats.Asn1;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using OpenCvSharp;
-using OpenCvSharp.Extensions;
-using OpenCvSharp.Features2D;
+﻿using System.Drawing;
+using System.Drawing.Imaging;
+using System.Runtime.InteropServices;
 
 namespace BayerRawImageViewer
 {
-    internal class BayerRaw: IDisposable
+    /// <summary>
+    /// A Bayer raw image loaded from file. Pixels are kept as 16-bit values,
+    /// MSB-aligned (a 10-bit value v is stored as v &lt;&lt; 6), one per pixel, row-major.
+    ///
+    /// Each loader decodes one group of pixels at a time. Bit diagrams use letters
+    /// for pixels in file order (A is the 1st pixel of a group, B the 2nd, ...);
+    /// A0 is the LSB of pixel A.
+    /// </summary>
+    internal class BayerRaw
     {
+        /// <summary>
+        /// Packed RAW14: all pixels form one continuous LSB-first bit stream.
+        /// 4 pixels fill 7 bytes exactly.
+        ///   bit     7   6   5   4   3   2   1   0
+        ///   byte 0  A7  A6  A5  A4  A3  A2  A1  A0
+        ///   byte 1  B1  B0  A13 A12 A11 A10 A9  A8
+        ///   byte 2  B9  B8  B7  B6  B5  B4  B3  B2
+        ///   byte 3  C3  C2  C1  C0  B13 B12 B11 B10
+        ///   byte 4  C11 C10 C9  C8  C7  C6  C5  C4
+        ///   byte 5  D5  D4  D3  D2  D1  D0  C13 C12
+        ///   byte 6  D13 D12 D11 D10 D9  D8  D7  D6
+        /// </summary>
         private bool LoadPackedRaw14(string pathname)
         {
-            byte[] data = System.IO.File.ReadAllBytes(pathname);
+            byte[] data = File.ReadAllBytes(pathname);
             if (data.Length < stride * height || data.Length < width * height * 7 / 4)
                 return false;
 
-            unpackedRaw = new Mat(height, width, MatType.CV_16UC1);
-            var indexer = unpackedRaw.GetGenericIndexer<ushort>();
+            unpackedRaw = new ushort[width * height];
             for (int row = 0; row < height; row++)
             {
-                /* convert packed raw14 to unpacked raw16 */
+                int rowStart = row * width;
                 int offset = row * stride;
-                for (int col = 0; col < width;)
+                for (int col = 0; col < width; col += 4)
                 {
-                    ushort value = 0;
+                    // 7 bytes = one 56-bit little-endian word; pixel i is bits [14*i, 14*i + 13]
+                    ulong word = LittleEndian(data, offset, 7);
+                    int pixelA = (int)(word >> 0) & 0x3fff;
+                    int pixelB = (int)(word >> 14) & 0x3fff;
+                    int pixelC = (int)(word >> 28) & 0x3fff;
+                    int pixelD = (int)(word >> 42) & 0x3fff;
 
-                    value = (ushort)data[offset + 0];
-                    value |= (ushort)((data[offset + 1] & 0x3f) << 8);
-                    indexer[row, col++] = (ushort)(value << 2);
-
-                    value = (ushort)((data[offset + 1] & 0xc0) >> 6);
-                    value |= (ushort)((data[offset + 2] & 0xff) << 2);
-                    value |= (ushort)((data[offset + 3] & 0x0f) << 10);
-                    indexer[row, col++] = (ushort)(value << 2);
-
-                    value = (ushort)((data[offset + 3] & 0xf0) >> 4);
-                    value |= (ushort)((data[offset + 4] & 0xff) << 4);
-                    value |= (ushort)((data[offset + 5] & 0x03) << 12);
-                    indexer[row, col++] = (ushort)(value << 2);
-
-                    value = (ushort)((data[offset + 5] & 0xfc) >> 2);
-                    value |= (ushort)((data[offset + 6] & 0xff) << 6);
-                    indexer[row, col++] = (ushort)(value << 2);
-
+                    unpackedRaw[rowStart + col] = MsbAlign(pixelA);
+                    unpackedRaw[rowStart + col + 1] = MsbAlign(pixelB);
+                    unpackedRaw[rowStart + col + 2] = MsbAlign(pixelC);
+                    unpackedRaw[rowStart + col + 3] = MsbAlign(pixelD);
 
                     offset += 7;
                 }
@@ -56,171 +58,34 @@ namespace BayerRawImageViewer
             return true;
         }
 
+        /// <summary>
+        /// Packed RAW12: all pixels form one continuous LSB-first bit stream.
+        /// 2 pixels fill 3 bytes exactly.
+        ///   bit     7   6   5   4   3   2   1   0
+        ///   byte 0  A7  A6  A5  A4  A3  A2  A1  A0
+        ///   byte 1  B3  B2  B1  B0  A11 A10 A9  A8
+        ///   byte 2  B11 B10 B9  B8  B7  B6  B5  B4
+        /// </summary>
         private bool LoadPackedRaw12(string pathname)
         {
-            byte[] data = System.IO.File.ReadAllBytes(pathname);
+            byte[] data = File.ReadAllBytes(pathname);
             if (data.Length < stride * height || data.Length < width * height * 3 / 2)
                 return false;
 
-            unpackedRaw = new Mat(height, width, MatType.CV_16UC1);
-            var indexer = unpackedRaw.GetGenericIndexer<ushort>();
+            unpackedRaw = new ushort[width * height];
             for (int row = 0; row < height; row++)
             {
-                /* convert packed raw12 to unpacked raw16 */
-                int offset = row * stride;
-                for (int col = 0; col < width;)
-                {
-                    ushort value = 0;
-
-                    value = (ushort)data[offset + 0];
-                    value |= (ushort)((data[offset + 1] & 0x0f) << 8);
-                    indexer[row, col++] = (ushort)(value << 4);
-
-                    value = (ushort)((data[offset + 1] & 0xf0)  >> 4);
-                    value |= (ushort)((data[offset + 2] & 0xff) << 4);
-                    indexer[row, col++] = (ushort)(value << 4);
-                    offset += 3;
-                }
-            }
-
-            return true;
-        }
-
-        private bool LoadPackedRaw10(string pathname)
-        {
-            byte[] data = System.IO.File.ReadAllBytes(pathname);
-            if (data.Length < stride * height || data.Length < width * 5 / 4 * height)
-                return false;
-
-            unpackedRaw = new Mat(height, width, MatType.CV_16UC1);
-            var indexer = unpackedRaw.GetGenericIndexer<ushort>();
-            for (int row = 0; row < height; row++)
-            {
-                /* convert packed raw10 to unpacked raw16 */
-                int offset = row * stride;
-                for (int col = 0; col < width;)
-                {
-                    ushort value = 0;
-
-                    value = (ushort)data[offset + 0];
-                    value |= (ushort)((data[offset + 1] & 0x03) << 8);
-                    indexer[row, col++] = (ushort)(value << 6);
-
-                    value = (ushort)(data[offset + 1] >> 2);
-                    value |= (ushort)((data[offset + 2] & 0x0f) << 6);
-                    indexer[row, col++] = (ushort)(value << 6);
-
-                    value = (ushort)(data[offset + 2] >> 4);
-                    value |= (ushort)((data[offset + 3] & 0x3f) << 4);
-                    indexer[row, col++] = (ushort)(value << 6);
-
-                    value = (ushort)(data[offset + 3] >> 6);
-                    value |= (ushort)((data[offset + 4] & 0xff) << 2);
-                    indexer[row, col++] = (ushort)(value << 6);
-
-                    offset += 5;
-                }
-            }
-
-            return true;
-        }
-
-        private bool LoadUnpackedRaw(string pathname)
-        {
-            byte[] data = System.IO.File.ReadAllBytes(pathname);
-            if (data.Length < stride * height)
-                return false;
-
-            unpackedRaw = new Mat(height, width, MatType.CV_16UC1);
-            if (depth == 8)
-            {
-                var indexer = unpackedRaw.GetGenericIndexer<ushort>();
-                for (int row = 0; row < height; row++)
-                {
-                    int offset = row * stride;
-                    for (int col = 0; col < width;)
-                    {
-                        indexer[row, col++] = (ushort)(data[offset] << 8);
-                        offset++;
-                    }
-                }
-            }
-            else if (depth > 8 && depth <= 16)
-            {
-                int shift = 16 - depth;
-                var indexer = unpackedRaw.GetGenericIndexer<ushort>();
-                for (int row = 0; row < height; row++)
-                {
-                    int offset = row * stride;
-                    for (int col = 0; col < width;)
-                    {
-                        ushort value = 0;
-
-                        value = (ushort)(data[offset + 0] | (data[offset + 1] << 8));
-                        indexer[row, col++] = (ushort)(value << shift);
-
-                        offset += 2;
-                    }
-                }
-            }
-
-            return true;
-        }
-
-        private bool LoadMIPIRaw10(string pathname)
-        {
-            byte[] data = System.IO.File.ReadAllBytes(pathname);
-            if (data.Length < stride * height || data.Length < width * 5 / 4 * height)
-                return false;
-
-            unpackedRaw = new Mat(height, width, MatType.CV_16UC1);
-            var indexer = unpackedRaw.GetGenericIndexer<ushort>();
-            for (int row = 0; row < height; row++)
-            {
-                /* convert MIPI raw10 to unpacked raw16 */
-                int offset = row * stride;
-                for (int col = 0; col < width; col += 4)
-                {
-                    // read 4 10-bit pixels
-                    ushort p0 = (ushort)(data[offset] << 2 | (data[offset + 4] & 0x03));
-                    ushort p1 = (ushort)(data[offset + 1] << 2 | ((data[offset + 4] & 0x0C) >> 2));
-                    ushort p2 = (ushort)(data[offset + 2] << 2 | ((data[offset + 4] & 0x30) >> 4));
-                    ushort p3 = (ushort)(data[offset + 3] << 2 | ((data[offset + 4] & 0xC0) >> 6));
-
-                    // convert 10-bit pixels to 16-bit pixel
-                    indexer[row, col] = (ushort)(p0 << 6);
-                    indexer[row, col + 1] = (ushort)(p1 << 6);
-                    indexer[row, col + 2] = (ushort)(p2 << 6);
-                    indexer[row, col + 3] = (ushort)(p3 << 6);
-
-                    offset += 5;
-                }
-            }
-
-            return true;
-        }
-
-        private bool LoadMIPIRaw12(string pathname)
-        {
-            byte[] data = System.IO.File.ReadAllBytes(pathname);
-            if (data.Length < stride * height || data.Length < width * 3 / 2 * height)
-                return false;
-
-            unpackedRaw = new Mat(height, width, MatType.CV_16UC1);
-            var indexer = unpackedRaw.GetGenericIndexer<ushort>();
-            for (int row = 0; row < height; row++)
-            {
-                /* convert MIPI raw12 to unpacked raw16 */
+                int rowStart = row * width;
                 int offset = row * stride;
                 for (int col = 0; col < width; col += 2)
                 {
-                    // read 2 12-bit pixels
-                    ushort p0 = (ushort)((data[offset] << 4) | ((data[offset + 2] & 0x0F)));
-                    ushort p1 = (ushort)((data[offset + 1] << 4) | ((data[offset + 2] & 0xF0) >> 4));
+                    // 3 bytes = one 24-bit little-endian word; pixel i is bits [12*i, 12*i + 11]
+                    ulong word = LittleEndian(data, offset, 3);
+                    int pixelA = (int)(word >> 0) & 0xfff;
+                    int pixelB = (int)(word >> 12) & 0xfff;
 
-                    // convert 12-bit pixels to 16-bit pixel
-                    indexer[row, col] = (ushort)(p0 << 4);
-                    indexer[row, col + 1] = (ushort)(p1 << 4);
+                    unpackedRaw[rowStart + col] = MsbAlign(pixelA);
+                    unpackedRaw[rowStart + col + 1] = MsbAlign(pixelB);
 
                     offset += 3;
                 }
@@ -229,37 +94,221 @@ namespace BayerRawImageViewer
             return true;
         }
 
-        private bool LoadMIPIRaw14(string pathname)
+        /// <summary>
+        /// Packed RAW10: all pixels form one continuous LSB-first bit stream.
+        /// 4 pixels fill 5 bytes exactly.
+        ///   bit     7   6   5   4   3   2   1   0
+        ///   byte 0  A7  A6  A5  A4  A3  A2  A1  A0
+        ///   byte 1  B5  B4  B3  B2  B1  B0  A9  A8
+        ///   byte 2  C3  C2  C1  C0  B9  B8  B7  B6
+        ///   byte 3  D1  D0  C9  C8  C7  C6  C5  C4
+        ///   byte 4  D9  D8  D7  D6  D5  D4  D3  D2
+        /// </summary>
+        private bool LoadPackedRaw10(string pathname)
         {
-            byte[] data = System.IO.File.ReadAllBytes(pathname);
-            if (data.Length < stride * height || data.Length < width * 7 / 4 * height)
+            byte[] data = File.ReadAllBytes(pathname);
+            if (data.Length < stride * height || data.Length < width * 5 / 4 * height)
                 return false;
 
-            unpackedRaw = new Mat(height, width, MatType.CV_16UC1);
-            var indexer = unpackedRaw.GetGenericIndexer<ushort>();
+            unpackedRaw = new ushort[width * height];
             for (int row = 0; row < height; row++)
             {
-                /* convert MIPI raw14 to unpacked raw16 */
+                int rowStart = row * width;
                 int offset = row * stride;
                 for (int col = 0; col < width; col += 4)
                 {
-                    // read 4 14-bit pixels
-                    ushort p0 = (ushort)((data[offset] << 6) | (data[offset + 4] & 0x3F));
-                    ushort p1 = (ushort)((data[offset + 1] << 6) | ((data[offset + 4] & 0xC0) >> 6) | ((data[offset + 5] & 0x0F) << 2));
-                    ushort p2 = (ushort)((data[offset + 2] << 6) | ((data[offset + 5] & 0xF0) >> 4) | ((data[offset + 6] & 0x03) << 4));
-                    ushort p3 = (ushort)((data[offset + 3] << 6) | ((data[offset + 6] & 0xFC) >> 2));
+                    // 5 bytes = one 40-bit little-endian word; pixel i is bits [10*i, 10*i + 9]
+                    ulong word = LittleEndian(data, offset, 5);
+                    int pixelA = (int)(word >> 0) & 0x3ff;
+                    int pixelB = (int)(word >> 10) & 0x3ff;
+                    int pixelC = (int)(word >> 20) & 0x3ff;
+                    int pixelD = (int)(word >> 30) & 0x3ff;
 
-                    // convert 14-bit pixels to 16-bit pixel
-                    indexer[row, col] = (ushort)(p0 << 2);
-                    indexer[row, col + 1] = (ushort)(p1 << 2);
-                    indexer[row, col + 2] = (ushort)(p2 << 2);
-                    indexer[row, col + 3] = (ushort)(p3 << 2);
+                    unpackedRaw[rowStart + col] = MsbAlign(pixelA);
+                    unpackedRaw[rowStart + col + 1] = MsbAlign(pixelB);
+                    unpackedRaw[rowStart + col + 2] = MsbAlign(pixelC);
+                    unpackedRaw[rowStart + col + 3] = MsbAlign(pixelD);
+
+                    offset += 5;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Unpacked raw.
+        /// 8-bit: one byte per pixel.
+        /// 9 to 16-bit: one little-endian 16-bit word per pixel, value in the low bits.
+        ///   e.g. 10-bit:
+        ///   bit     7   6   5   4   3   2   1   0
+        ///   byte 0  A7  A6  A5  A4  A3  A2  A1  A0
+        ///   byte 1  0   0   0   0   0   0   A9  A8
+        /// </summary>
+        private bool LoadUnpackedRaw(string pathname)
+        {
+            byte[] data = File.ReadAllBytes(pathname);
+            if (data.Length < stride * height)
+                return false;
+
+            unpackedRaw = new ushort[width * height];
+            for (int row = 0; row < height; row++)
+            {
+                int rowStart = row * width;
+                int offset = row * stride;
+                if (depth == 8)
+                {
+                    for (int col = 0; col < width; col++)
+                        unpackedRaw[rowStart + col] = MsbAlign(data[offset + col]);
+                }
+                else if (depth > 8 && depth <= 16)
+                {
+                    for (int col = 0; col < width; col++)
+                    {
+                        int pixel = (int)LittleEndian(data, offset + 2 * col, 2);
+                        unpackedRaw[rowStart + col] = MsbAlign(pixel);
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// MIPI CSI-2 RAW10: 4 pixels in 5 bytes. Bytes 0-3 hold the 8 MSBs of
+        /// pixels A-D, byte 4 packs the 2 LSBs of all four.
+        ///   bit     7   6   5   4   3   2   1   0
+        ///   byte 0  A9  A8  A7  A6  A5  A4  A3  A2
+        ///   byte 1  B9  B8  B7  B6  B5  B4  B3  B2
+        ///   byte 2  C9  C8  C7  C6  C5  C4  C3  C2
+        ///   byte 3  D9  D8  D7  D6  D5  D4  D3  D2
+        ///   byte 4  D1  D0  C1  C0  B1  B0  A1  A0
+        /// </summary>
+        private bool LoadMIPIRaw10(string pathname)
+        {
+            byte[] data = File.ReadAllBytes(pathname);
+            if (data.Length < stride * height || data.Length < width * 5 / 4 * height)
+                return false;
+
+            unpackedRaw = new ushort[width * height];
+            for (int row = 0; row < height; row++)
+            {
+                int rowStart = row * width;
+                int offset = row * stride;
+                for (int col = 0; col < width; col += 4)
+                {
+                    // 2 LSBs of pixel i are bits [2*i, 2*i + 1] of byte 4
+                    int lsbs = data[offset + 4];
+                    int pixelA = (data[offset + 0] << 2) | ((lsbs >> 0) & 0x3);
+                    int pixelB = (data[offset + 1] << 2) | ((lsbs >> 2) & 0x3);
+                    int pixelC = (data[offset + 2] << 2) | ((lsbs >> 4) & 0x3);
+                    int pixelD = (data[offset + 3] << 2) | ((lsbs >> 6) & 0x3);
+
+                    unpackedRaw[rowStart + col] = MsbAlign(pixelA);
+                    unpackedRaw[rowStart + col + 1] = MsbAlign(pixelB);
+                    unpackedRaw[rowStart + col + 2] = MsbAlign(pixelC);
+                    unpackedRaw[rowStart + col + 3] = MsbAlign(pixelD);
+
+                    offset += 5;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// MIPI CSI-2 RAW12: 2 pixels in 3 bytes. Bytes 0-1 hold the 8 MSBs of
+        /// pixels A-B, byte 2 packs the 4 LSBs of both.
+        ///   bit     7   6   5   4   3   2   1   0
+        ///   byte 0  A11 A10 A9  A8  A7  A6  A5  A4
+        ///   byte 1  B11 B10 B9  B8  B7  B6  B5  B4
+        ///   byte 2  B3  B2  B1  B0  A3  A2  A1  A0
+        /// </summary>
+        private bool LoadMIPIRaw12(string pathname)
+        {
+            byte[] data = File.ReadAllBytes(pathname);
+            if (data.Length < stride * height || data.Length < width * 3 / 2 * height)
+                return false;
+
+            unpackedRaw = new ushort[width * height];
+            for (int row = 0; row < height; row++)
+            {
+                int rowStart = row * width;
+                int offset = row * stride;
+                for (int col = 0; col < width; col += 2)
+                {
+                    // 4 LSBs of pixel i are bits [4*i, 4*i + 3] of byte 2
+                    int lsbs = data[offset + 2];
+                    int pixelA = (data[offset + 0] << 4) | ((lsbs >> 0) & 0xf);
+                    int pixelB = (data[offset + 1] << 4) | ((lsbs >> 4) & 0xf);
+
+                    unpackedRaw[rowStart + col] = MsbAlign(pixelA);
+                    unpackedRaw[rowStart + col + 1] = MsbAlign(pixelB);
+
+                    offset += 3;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// MIPI CSI-2 RAW14: 4 pixels in 7 bytes. Bytes 0-3 hold the 8 MSBs of
+        /// pixels A-D, bytes 4-6 pack the 6 LSBs of all four.
+        ///   bit     7   6   5   4   3   2   1   0
+        ///   byte 0  A13 A12 A11 A10 A9  A8  A7  A6
+        ///   byte 1  B13 B12 B11 B10 B9  B8  B7  B6
+        ///   byte 2  C13 C12 C11 C10 C9  C8  C7  C6
+        ///   byte 3  D13 D12 D11 D10 D9  D8  D7  D6
+        ///   byte 4  B1  B0  A5  A4  A3  A2  A1  A0
+        ///   byte 5  C3  C2  C1  C0  B5  B4  B3  B2
+        ///   byte 6  D5  D4  D3  D2  D1  D0  C5  C4
+        /// </summary>
+        private bool LoadMIPIRaw14(string pathname)
+        {
+            byte[] data = File.ReadAllBytes(pathname);
+            if (data.Length < stride * height || data.Length < width * 7 / 4 * height)
+                return false;
+
+            unpackedRaw = new ushort[width * height];
+            for (int row = 0; row < height; row++)
+            {
+                int rowStart = row * width;
+                int offset = row * stride;
+                for (int col = 0; col < width; col += 4)
+                {
+                    // Bytes 4-6 = one 24-bit little-endian word; 6 LSBs of pixel i are bits [6*i, 6*i + 5]
+                    int lsbs = (int)LittleEndian(data, offset + 4, 3);
+                    int pixelA = (data[offset + 0] << 6) | ((lsbs >> 0) & 0x3f);
+                    int pixelB = (data[offset + 1] << 6) | ((lsbs >> 6) & 0x3f);
+                    int pixelC = (data[offset + 2] << 6) | ((lsbs >> 12) & 0x3f);
+                    int pixelD = (data[offset + 3] << 6) | ((lsbs >> 18) & 0x3f);
+
+                    unpackedRaw[rowStart + col] = MsbAlign(pixelA);
+                    unpackedRaw[rowStart + col + 1] = MsbAlign(pixelB);
+                    unpackedRaw[rowStart + col + 2] = MsbAlign(pixelC);
+                    unpackedRaw[rowStart + col + 3] = MsbAlign(pixelD);
 
                     offset += 7;
                 }
             }
 
             return true;
+        }
+
+        // Combine count bytes starting at offset into one integer, first byte as the least significant
+        private static ulong LittleEndian(byte[] data, int offset, int count)
+        {
+            ulong word = 0;
+            for (int i = count - 1; i >= 0; i--)
+                word = (word << 8) | data[offset + i];
+            return word;
+        }
+
+        // Scale a value of the input depth to 16 bits
+        private ushort MsbAlign(int value)
+        {
+            return (ushort)(value << (16 - depth));
         }
 
         public BayerRaw(string pathname, int _width, int _height, int _stride, int _depth, RawType _type)
@@ -317,41 +366,20 @@ namespace BayerRawImageViewer
             }
         }
 
-        public void SetBayerPattern(ColorConversionCodes pattern)
+        public void SetBayerPattern(BayerPattern pattern)
         {
             bayerPattern = pattern;
         }
 
         public Bitmap ToBitmap()
         {
-            using var bgr16BitMat = new Mat(height, width, MatType.CV_16UC3);
-            using var bgr8BitMat = new Mat(height, width, MatType.CV_8UC3);
+            ushort[] raw = ImageProcessing.SubtractBlackLevel(unpackedRaw, ob);
+            ushort[] bgr = ImageProcessing.DemosaicBilinear(raw, width, height, bayerPattern);
 
-            using var unpackedRawMinusOb = unpackedRaw - ob;
-            Cv2.Demosaicing(unpackedRawMinusOb, bgr16BitMat, bayerPattern, 3);
-            if (enableAwb)
-            {
-                // calculate WB gain
-                Scalar sums = Cv2.Sum(bgr16BitMat);
-                double rGain = sums[1] / (double)sums[2];
-                double bGain = sums[1] / (double)sums[0];
+            var (blueGain, redGain) = enableAwb ? ImageProcessing.ComputeGrayWorldGains(bgr) : (1.0, 1.0);
+            byte[] bgr8 = ImageProcessing.ToBgr8(bgr, blueGain, redGain);
 
-                // apply WB gain
-                Cv2.Split(bgr16BitMat, out var bgrSplit16Bit);
-
-                using var bPlane = bgrSplit16Bit[0] * bGain;
-                using var rPlane = bgrSplit16Bit[2] * rGain;
-                Mat[] planes = { bPlane, bgrSplit16Bit[1], rPlane };
-                using var bgr16BitWBMat = new Mat();
-                Cv2.Merge(planes, bgr16BitWBMat);
-
-                bgr16BitWBMat.ConvertTo(bgr8BitMat, MatType.CV_8UC3, 1 / 256.0);
-            }
-            else {
-                bgr16BitMat.ConvertTo(bgr8BitMat, MatType.CV_8UC3, 1 / 256.0);
-            }
-
-            return BitmapConverter.ToBitmap(bgr8BitMat);
+            return CreateBitmap(bgr8, width, height);
         }
 
         public void saveUnpackRaw(int _depth, string _pathname)
@@ -369,43 +397,36 @@ namespace BayerRawImageViewer
             }
 
             using var fs = File.Open(_pathname, FileMode.Create);
-            using var convertedRaw = new Mat();
             if (_depth == 8)
             {
-                unpackedRaw.ConvertTo(convertedRaw, MatType.CV_8UC1, 1 / 256.0);
-                convertedRaw.GetArray(out byte[] data);
-                fs.Write(data);
+                fs.Write(ImageProcessing.ReduceTo8Bit(unpackedRaw));
             }
             else
             {
-                unpackedRaw.ConvertTo(convertedRaw, MatType.CV_16UC1, 1.0 / (1 << (16 - _depth)));
-                convertedRaw.GetArray(out short[] data);
-                using (BinaryWriter writer = new BinaryWriter(fs))
-                {
-                    foreach (short value in data)
-                        writer.Write(value);
-                }
+                // One 16-bit word per pixel, little-endian (the byte order of Windows on x86/x64/ARM64)
+                ushort[] data = ImageProcessing.ReduceToDepth(unpackedRaw, _depth);
+                fs.Write(MemoryMarshal.AsBytes(data.AsSpan()));
             }
         }
 
-
-        ~BayerRaw()
+        // bgr8 holds tightly packed B, G, R bytes; Format24bppRgb uses the same
+        // byte order but pads each row to a multiple of 4 bytes, so copy row by row
+        internal static Bitmap CreateBitmap(byte[] bgr8, int width, int height)
         {
-            Dispose(false);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposing && unpackedRaw != null)
+            var bmp = new Bitmap(width, height, PixelFormat.Format24bppRgb);
+            var bd = bmp.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
+            try
             {
-                unpackedRaw.Dispose();
+                int rowBytes = width * 3;
+                for (int y = 0; y < height; y++)
+                    Marshal.Copy(bgr8, y * rowBytes, bd.Scan0 + y * bd.Stride, rowBytes);
             }
-        }
+            finally
+            {
+                bmp.UnlockBits(bd);
+            }
 
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
+            return bmp;
         }
 
 
@@ -416,13 +437,13 @@ namespace BayerRawImageViewer
             RawType_Unpacked
         }
 
-        Mat unpackedRaw = null!;
+        private ushort[] unpackedRaw = Array.Empty<ushort>();
         private int width;
         private int height;
         private int stride;
         private int depth;
         private RawType type;
-        private ColorConversionCodes bayerPattern = ColorConversionCodes.BayerBG2RGB;
+        private BayerPattern bayerPattern = BayerPattern.BGGR;
         private bool enableAwb = false;
 
         public bool EnableAwb
