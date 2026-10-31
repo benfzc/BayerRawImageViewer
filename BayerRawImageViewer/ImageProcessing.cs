@@ -155,13 +155,18 @@ namespace BayerRawImageViewer
             return result;
         }
 
-        /// <summary>Convert a 16-bit raw to the given depth (LSB-aligned, rounded).</summary>
+        /// <summary>
+        /// Convert a 16-bit raw to the given depth (LSB-aligned, rounded).
+        /// Rounding can carry the top values one step over the range
+        /// (e.g. 12-bit 4095 to 10-bit gives 1023.75 -> 1024), so clamp to the depth's maximum.
+        /// </summary>
         public static ushort[] ReduceToDepth(ushort[] raw16, int depth)
         {
             double scale = 1.0 / (1 << (16 - depth));
+            int max = (1 << depth) - 1;
             var result = new ushort[raw16.Length];
             for (int i = 0; i < raw16.Length; i++)
-                result[i] = SaturateToUInt16(raw16[i] * scale);
+                result[i] = (ushort)Math.Min(Math.Round(raw16[i] * scale), max);
             return result;
         }
 
