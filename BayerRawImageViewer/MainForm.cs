@@ -8,6 +8,11 @@ namespace BayerRawImageViewer
         public MainForm()
         {
             InitializeComponent();
+            using (var iconStream = typeof(MainForm).Assembly.GetManifestResourceStream("app.ico"))
+            {
+                if (iconStream != null)
+                    Icon = new Icon(iconStream);
+            }
             comboBoxOutputRawDepth.Items.Clear();
             comboBoxOutputRawDepth.Items.Add(new ComboboxItemBitNumber("8 bit", 8));
             comboBoxOutputRawDepth.Items.Add(new ComboboxItemBitNumber("10 bit", 10));

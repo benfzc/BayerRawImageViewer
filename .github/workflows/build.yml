@@ -57,12 +57,19 @@ jobs:
       - name: Restore
         run: dotnet restore ${{ env.PROJECT }} -r ${{ env.RID }}
 
-      # Self-contained: runs without installing the .NET runtime
+      # Both packages are a single exe plus its .dll.config (saved UI settings),
+      # so users can see right away which file to start
+      # Self-contained: runs without installing the .NET runtime; runtime and
+      # native libraries are bundled into the exe and compressed
       - name: Publish (self-contained)
         run: >
           dotnet publish ${{ env.PROJECT }} -c Release -r ${{ env.RID }}
           --self-contained true --no-restore
           -p:Version=${{ steps.ver.outputs.version }}
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -p:DebugType=none
           -o out/self-contained
 
       # Framework-dependent: smaller, requires .NET 8 Desktop Runtime
@@ -71,12 +78,15 @@ jobs:
           dotnet publish ${{ env.PROJECT }} -c Release -r ${{ env.RID }}
           --self-contained false --no-restore
           -p:Version=${{ steps.ver.outputs.version }}
+          -p:PublishSingleFile=true
+          -p:DebugType=none
           -o out/framework-dependent
 
       - name: Package
         shell: pwsh
         run: |
           $v = "${{ steps.ver.outputs.version }}"
+          Get-ChildItem out -Recurse -File | Format-Table FullName, Length
           New-Item -ItemType Directory -Force dist | Out-Null
           Compress-Archive -Path out/self-contained/* -DestinationPath "dist/${{ env.APP_NAME }}-$v-${{ env.RID }}-self-contained.zip"
           Compress-Archive -Path out/framework-dependent/* -DestinationPath "dist/${{ env.APP_NAME }}-$v-${{ env.RID }}.zip"
