@@ -7,6 +7,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <!-- Keep freed GC memory committed: each image allocates large buffers, and reusing
+         committed pages avoids page faults on every conversion -->
+    <RetainVMGarbageCollection>true</RetainVMGarbageCollection>
   </PropertyGroup>
 
   <ItemGroup>
