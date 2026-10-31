@@ -1,0 +1,94 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PROJECT: BayerRawImageViewer/BayerRawImageViewer.csproj
+  APP_NAME: BayerRawImageViewer
+  RID: win-x64
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # Tag "v1.2.3" -> version "1.2.3"; otherwise fall back to csproj version + run number
+      - name: Determine version
+        id: ver
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="0.0.0-ci.${GITHUB_RUN_NUMBER}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Version: $VERSION"
+
+      - name: Restore
+        run: dotnet restore ${{ env.PROJECT }} -r ${{ env.RID }}
+
+      # Self-contained: runs without installing the .NET runtime
+      - name: Publish (self-contained)
+        run: >
+          dotnet publish ${{ env.PROJECT }} -c Release -r ${{ env.RID }}
+          --self-contained true --no-restore
+          -p:Version=${{ steps.ver.outputs.version }}
+          -o out/self-contained
+
+      # Framework-dependent: smaller, requires .NET 8 Desktop Runtime
+      - name: Publish (framework-dependent)
+        run: >
+          dotnet publish ${{ env.PROJECT }} -c Release -r ${{ env.RID }}
+          --self-contained false --no-restore
+          -p:Version=${{ steps.ver.outputs.version }}
+          -o out/framework-dependent
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $v = "${{ steps.ver.outputs.version }}"
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Compress-Archive -Path out/self-contained/* -DestinationPath "dist/${{ env.APP_NAME }}-$v-${{ env.RID }}-self-contained.zip"
+          Compress-Archive -Path out/framework-dependent/* -DestinationPath "dist/${{ env.APP_NAME }}-$v-${{ env.RID }}.zip"
+          Get-ChildItem dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APP_NAME }}-${{ steps.ver.outputs.version }}
+          path: dist/*.zip
+          retention-days: 30
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/*.zip \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes
