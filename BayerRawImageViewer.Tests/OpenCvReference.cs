@@ -70,6 +70,13 @@ namespace BayerRawImageViewer.Tests
 
             unpackedRaw.ConvertTo(convertedRaw, MatType.CV_16UC1, 1.0 / (1 << (16 - outputDepth)));
             convertedRaw.GetArray(out ushort[] words);
+
+            // The OpenCV version could round the top values to 2^depth (e.g. 1024 for 10-bit);
+            // the expected behavior is to clamp them to the depth's maximum
+            ushort max = (ushort)((1 << outputDepth) - 1);
+            for (int i = 0; i < words.Length; i++)
+                words[i] = Math.Min(words[i], max);
+
             var bytes = new byte[words.Length * 2];
             Buffer.BlockCopy(words, 0, bytes, 0, bytes.Length);
             return bytes;

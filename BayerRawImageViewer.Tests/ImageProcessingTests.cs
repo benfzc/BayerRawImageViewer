@@ -111,7 +111,24 @@ namespace BayerRawImageViewer.Tests
             using var expected = new Mat();
             src.ConvertTo(expected, MatType.CV_16UC1, 1.0 / (1 << (16 - depth)));
 
-            Assert.Equal(ToUShorts(expected), ImageProcessing.ReduceToDepth(raw, depth));
+            // Same as OpenCV, except values rounded past the depth's range are clamped
+            ushort max = (ushort)((1 << depth) - 1);
+            ushort[] clamped = ToUShorts(expected).Select(v => Math.Min(v, max)).ToArray();
+            Assert.Equal(clamped, ImageProcessing.ReduceToDepth(raw, depth));
+        }
+
+        [Theory]
+        [InlineData(12, 10, 1023)]
+        [InlineData(14, 10, 1023)]
+        [InlineData(14, 12, 4095)]
+        [InlineData(10, 10, 1023)]
+        public void ReduceToDepth_FullScaleInput_StaysWithinOutputDepth(int inputDepth, int outputDepth, int expected)
+        {
+            ushort fullScale = (ushort)(((1 << inputDepth) - 1) << (16 - inputDepth));
+
+            ushort[] result = ImageProcessing.ReduceToDepth(new[] { fullScale }, outputDepth);
+
+            Assert.Equal(expected, result[0]);
         }
 
         // OpenCV names patterns differently and outputs RGB, which together

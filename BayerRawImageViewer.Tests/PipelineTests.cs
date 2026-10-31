@@ -65,6 +65,23 @@ namespace BayerRawImageViewer.Tests
             Assert.Equal(expected, File.ReadAllBytes(output.Path));
         }
 
+        [Fact]
+        public void SaveUnpackRaw_FullScale12BitTo10Bit_WritesMax1023()
+        {
+            const int width = 64, height = 4, depth = 12;
+            ushort[] pixels = Enumerable.Repeat((ushort)4095, width * height).ToArray();
+            using var input = new TempFile();
+            using var output = new TempFile();
+
+            var bayerRaw = TestHelpers.LoadBayerRaw(input, pixels, width, height, depth, RawType.RawType_Unpacked);
+            bayerRaw.saveUnpackRaw(10, output.Path);
+
+            byte[] bytes = File.ReadAllBytes(output.Path);
+            var words = new ushort[width * height];
+            Buffer.BlockCopy(bytes, 0, words, 0, bytes.Length);
+            Assert.All(words, w => Assert.Equal(1023, w));
+        }
+
         private static void AssertBitmapMatches(ushort[] pixels, int width, int height, int depth, string label, bool awb, int ob)
         {
             using var file = new TempFile();
