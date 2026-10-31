@@ -56,32 +56,32 @@ namespace BayerRawImageViewer
                 ReadOnlySpan<ushort> down = raw.AsSpan((y + 1) * width, width);
                 Span<ushort> dst = bgr.AsSpan(y * width * 3, width * 3);
 
-                // In BGGR, even rows hold B and G, odd rows hold G and R
-                bool isBlueRow = ((y + dy) & 1) == 0;
+                // In BGGR, even rows hold B and G, odd rows hold G and R.
+                // Channel index (B = 0, R = 2) of the color sampled on this row, and of the other one
+                int rowChannel = ((y + dy) & 1) == 0 ? 0 : 2;
+                int columnChannel = 2 - rowChannel;
 
+                // Green and non-green sites alternate along a row
+                bool isGreen = ((1 + dx + y + dy) & 1) == 1;
                 for (int x = 1; x < width - 1; x++)
                 {
-                    bool isGreen = ((x + dx + y + dy) & 1) == 1;
+                    int o = x * 3;
                     if (isGreen)
                     {
                         // Green site: this row's color is left/right, the other color is up/down
-                        int rowColor = Average2(mid[x - 1], mid[x + 1]);
-                        int columnColor = Average2(up[x], down[x]);
-                        SetPixel(dst, x,
-                            blue: isBlueRow ? rowColor : columnColor,
-                            green: mid[x],
-                            red: isBlueRow ? columnColor : rowColor);
+                        dst[o + rowChannel] = (ushort)Average2(mid[x - 1], mid[x + 1]);
+                        dst[o + 1] = mid[x];
+                        dst[o + columnChannel] = (ushort)Average2(up[x], down[x]);
                     }
                     else
                     {
                         // Blue or red site: green is on the 4 sides, the opposite color on the 4 diagonals
-                        int green = Average4(up[x], down[x], mid[x - 1], mid[x + 1]);
-                        int opposite = Average4(up[x - 1], up[x + 1], down[x - 1], down[x + 1]);
-                        SetPixel(dst, x,
-                            blue: isBlueRow ? mid[x] : opposite,
-                            green: green,
-                            red: isBlueRow ? opposite : mid[x]);
+                        dst[o + rowChannel] = mid[x];
+                        dst[o + 1] = (ushort)Average4(up[x], down[x], mid[x - 1], mid[x + 1]);
+                        dst[o + columnChannel] = (ushort)Average4(up[x - 1], up[x + 1], down[x - 1], down[x + 1]);
                     }
+
+                    isGreen = !isGreen;
                 }
 
                 // Left and right border columns
@@ -178,13 +178,6 @@ namespace BayerRawImageViewer
         private static int Average2(int a, int b) => (a + b + 1) >> 1;
 
         private static int Average4(int a, int b, int c, int d) => (a + b + c + d + 2) >> 2;
-
-        private static void SetPixel(Span<ushort> row, int x, int blue, int green, int red)
-        {
-            row[x * 3] = (ushort)blue;
-            row[x * 3 + 1] = (ushort)green;
-            row[x * 3 + 2] = (ushort)red;
-        }
 
         private static double Gain(long target, long sum) => sum == 0 ? 1.0 : (double)target / sum;
 
