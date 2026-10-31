@@ -44,6 +44,42 @@ namespace BayerRawImageViewer.Tests
         }
 
         [Fact]
+        public void Load_StrideSmallerThanRow_Throws()
+        {
+            // Unpacked 10-bit needs 2 bytes per pixel, but the stride is set for packed 10-bit
+            // (the reported crash: switching raw type keeps the old stride)
+            int packedStride = Width * 5 / 4;
+            using var file = new TempFile();
+            File.WriteAllBytes(file.Path, new byte[packedStride * Height]);
+
+            var ex = Assert.Throws<ArgumentException>(() => new BayerRaw(file.Path, Width, Height, packedStride, 10, RawType.RawType_Unpacked));
+            Assert.Contains($"{Width * 2} bytes", ex.Message);
+        }
+
+        [Theory]
+        [InlineData("Packed", 10, 66)]
+        [InlineData("Packed", 12, 65)]
+        [InlineData("MIPI", 14, 66)]
+        public void Load_WidthNotMultipleOfPixelGroup_Throws(string typeName, int depth, int width)
+        {
+            var type = Enum.Parse<RawType>("RawType_" + typeName);
+            int stride = width * 2;
+            using var file = new TempFile();
+            File.WriteAllBytes(file.Path, new byte[stride * Height]);
+
+            Assert.Throws<ArgumentException>(() => new BayerRaw(file.Path, width, Height, stride, depth, type));
+        }
+
+        [Fact]
+        public void Load_ImageSmallerThan3x3_Throws()
+        {
+            using var file = new TempFile();
+            File.WriteAllBytes(file.Path, new byte[2 * 2 * Height]);
+
+            Assert.Throws<ArgumentException>(() => new BayerRaw(file.Path, 2, Height, 4, 12, RawType.RawType_Unpacked));
+        }
+
+        [Fact]
         public void Load_FileTooSmall_Throws()
         {
             using var file = new TempFile();

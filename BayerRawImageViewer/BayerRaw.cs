@@ -29,9 +29,6 @@ namespace BayerRawImageViewer
         private bool LoadPackedRaw14(string pathname)
         {
             byte[] data = File.ReadAllBytes(pathname);
-            if (data.Length < stride * height || data.Length < width * height * 7 / 4)
-                return false;
-
             unpackedRaw = new ushort[width * height];
             for (int row = 0; row < height; row++)
             {
@@ -69,9 +66,6 @@ namespace BayerRawImageViewer
         private bool LoadPackedRaw12(string pathname)
         {
             byte[] data = File.ReadAllBytes(pathname);
-            if (data.Length < stride * height || data.Length < width * height * 3 / 2)
-                return false;
-
             unpackedRaw = new ushort[width * height];
             for (int row = 0; row < height; row++)
             {
@@ -107,9 +101,6 @@ namespace BayerRawImageViewer
         private bool LoadPackedRaw10(string pathname)
         {
             byte[] data = File.ReadAllBytes(pathname);
-            if (data.Length < stride * height || data.Length < width * 5 / 4 * height)
-                return false;
-
             unpackedRaw = new ushort[width * height];
             for (int row = 0; row < height; row++)
             {
@@ -148,9 +139,6 @@ namespace BayerRawImageViewer
         private bool LoadUnpackedRaw(string pathname)
         {
             byte[] data = File.ReadAllBytes(pathname);
-            if (data.Length < stride * height)
-                return false;
-
             unpackedRaw = new ushort[width * height];
             for (int row = 0; row < height; row++)
             {
@@ -187,9 +175,6 @@ namespace BayerRawImageViewer
         private bool LoadMIPIRaw10(string pathname)
         {
             byte[] data = File.ReadAllBytes(pathname);
-            if (data.Length < stride * height || data.Length < width * 5 / 4 * height)
-                return false;
-
             unpackedRaw = new ushort[width * height];
             for (int row = 0; row < height; row++)
             {
@@ -227,9 +212,6 @@ namespace BayerRawImageViewer
         private bool LoadMIPIRaw12(string pathname)
         {
             byte[] data = File.ReadAllBytes(pathname);
-            if (data.Length < stride * height || data.Length < width * 3 / 2 * height)
-                return false;
-
             unpackedRaw = new ushort[width * height];
             for (int row = 0; row < height; row++)
             {
@@ -267,9 +249,6 @@ namespace BayerRawImageViewer
         private bool LoadMIPIRaw14(string pathname)
         {
             byte[] data = File.ReadAllBytes(pathname);
-            if (data.Length < stride * height || data.Length < width * 7 / 4 * height)
-                return false;
-
             unpackedRaw = new ushort[width * height];
             for (int row = 0; row < height; row++)
             {
@@ -296,6 +275,56 @@ namespace BayerRawImageViewer
             return true;
         }
 
+        /// <summary>
+        /// Check that the settings describe rows that fit in the stride and a file
+        /// large enough for them, so the loaders never read or write out of bounds.
+        /// </summary>
+        private void ValidateLayout(string pathname)
+        {
+            var (groupPixels, groupBytes) = PixelGroup();
+
+            // The demosaic needs at least a 3x3 neighborhood
+            if (width < 3 || height < 3)
+                throw new ArgumentException("Width and height must be at least 3 pixels.");
+
+            if (width % groupPixels != 0)
+                throw new ArgumentException($"Width must be a multiple of {groupPixels} for {depth}-bit {TypeName()} raw.");
+
+            int rowBytes = width / groupPixels * groupBytes;
+            if (stride < rowBytes)
+                throw new ArgumentException($"Stride must be at least {rowBytes} bytes: one row of {width} pixels in {depth}-bit {TypeName()} raw takes {rowBytes} bytes.");
+
+            if (new FileInfo(pathname).Length < (long)stride * height)
+                throw new ArgumentException("The file is smaller than stride x height. The depth or resolution settings might be incorrect.");
+        }
+
+        // Smallest group of pixels that fills whole bytes, e.g. 4 Packed RAW10 pixels in 5 bytes
+        private (int Pixels, int Bytes) PixelGroup()
+        {
+            if (depth == 8)
+                return (1, 1);
+            if (type == RawType.RawType_Unpacked && depth > 8 && depth <= 16)
+                return (1, 2);
+            if (type != RawType.RawType_Unpacked)
+            {
+                switch (depth)
+                {
+                    case 10: return (4, 5);
+                    case 12: return (2, 3);
+                    case 14: return (4, 7);
+                }
+            }
+
+            throw new ArgumentException($"{depth}-bit {TypeName()} raw is not supported.");
+        }
+
+        private string TypeName() => type switch
+        {
+            RawType.RawType_Packed => "Packed",
+            RawType.RawType_MIPI => "MIPI",
+            _ => "Unpacked",
+        };
+
         // Combine count bytes starting at offset into one integer, first byte as the least significant
         private static ulong LittleEndian(byte[] data, int offset, int count)
         {
@@ -320,6 +349,8 @@ namespace BayerRawImageViewer
             {
                 throw new ArgumentException("File does not exist.");
             }
+
+            ValidateLayout(pathname);
 
             switch (type)
             {
