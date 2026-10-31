@@ -33,12 +33,14 @@ namespace BayerRawImageViewer.Tests
 
             var loadTimes = new List<double>();
             var bitmapTimes = new List<double>();
+            int gen2Before = 0;
+            TimeSpan gcPauseBefore = TimeSpan.Zero;
 
             // The first round is a warm-up (JIT, native library loading) and is not recorded
             for (int i = 0; i <= Iterations; i++)
             {
                 var sw = Stopwatch.StartNew();
-                using var bayerRaw = new BayerRaw(file.Path, Width, Height, Stride, Depth, RawType.RawType_Packed);
+                var bayerRaw = new BayerRaw(file.Path, Width, Height, Stride, Depth, RawType.RawType_Packed);
                 double load = sw.Elapsed.TotalMilliseconds;
 
                 bayerRaw.EnableAwb = true;
@@ -49,16 +51,60 @@ namespace BayerRawImageViewer.Tests
                 using var bmp = bayerRaw.ToBitmap();
                 double toBitmap = sw.Elapsed.TotalMilliseconds;
 
-                if (i > 0)
+                if (i == 0)
+                {
+                    gen2Before = GC.CollectionCount(2);
+                    gcPauseBefore = GC.GetTotalPauseDuration();
+                }
+                else
                 {
                     loadTimes.Add(load);
                     bitmapTimes.Add(toBitmap);
                 }
             }
 
+            int gen2Collections = GC.CollectionCount(2) - gen2Before;
+            double gcPauseMs = (GC.GetTotalPauseDuration() - gcPauseBefore).TotalMilliseconds;
+
             output.WriteLine($"CPU cores: {Environment.ProcessorCount}, iterations: {Iterations}");
             output.WriteLine($"Load     : median {Median(loadTimes),7:F1} ms");
             output.WriteLine($"ToBitmap : median {Median(bitmapTimes),7:F1} ms");
+            output.WriteLine($"GC       : {gen2Collections} gen2 collections, {gcPauseMs:F1} ms total pause over {Iterations} iterations");
+        }
+
+        [Fact]
+        public void Stages_5120x2880()
+        {
+            var rng = new Random(0);
+            var raw = new ushort[Width * Height];
+            for (int i = 0; i < raw.Length; i++)
+                raw[i] = (ushort)(rng.Next(1 << Depth) << (16 - Depth));
+
+            ushort[] blackLevelRemoved = raw, bgr = raw;
+            (double Blue, double Red) gains = (1.0, 1.0);
+
+            output.WriteLine($"CPU cores: {Environment.ProcessorCount}, iterations: {Iterations}");
+            Measure("SubtractBlackLevel", () => blackLevelRemoved = ImageProcessing.SubtractBlackLevel(raw, 64 << (16 - Depth)));
+            Measure("DemosaicBilinear  ", () => bgr = ImageProcessing.DemosaicBilinear(blackLevelRemoved, Width, Height, BayerPattern.GBRG));
+            Measure("GrayWorldGains    ", () => gains = ImageProcessing.ComputeGrayWorldGains(bgr));
+            byte[] bgr8 = ImageProcessing.ToBgr8(bgr, gains.Blue, gains.Red);
+            Measure("ToBgr8            ", () => bgr8 = ImageProcessing.ToBgr8(bgr, gains.Blue, gains.Red));
+            Measure("CreateBitmap      ", () => BayerRaw.CreateBitmap(bgr8, Width, Height).Dispose());
+        }
+
+        // Run once as a warm-up, then print the median of the timed runs
+        private void Measure(string name, Action step)
+        {
+            step();
+            var times = new List<double>();
+            for (int i = 0; i < Iterations; i++)
+            {
+                var sw = Stopwatch.StartNew();
+                step();
+                times.Add(sw.Elapsed.TotalMilliseconds);
+            }
+
+            output.WriteLine($"{name} : median {Median(times),7:F1} ms");
         }
 
         private static double Median(List<double> values)
