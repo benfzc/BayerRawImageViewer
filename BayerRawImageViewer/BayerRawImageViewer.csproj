@@ -8,9 +8,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
 	<Version>1.0.0</Version>
 	<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
-	<!-- Keep freed GC memory committed: each image allocates large buffers, and reusing
-	     committed pages avoids page faults on every conversion -->
-	<RetainVMGarbageCollection>true</RetainVMGarbageCollection>
   </PropertyGroup>
 
   <ItemGroup>
